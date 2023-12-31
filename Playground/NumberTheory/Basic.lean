@@ -52,19 +52,19 @@ lemma ModEq.eq_of_le_of_le {a b m : ℕ} (h : a ≡ b [MOD m]) (ha : 1 ≤ a ∧
 lemma coprime_mul {a b n : ℕ} (ha : Coprime a n) (hb : Coprime b n) :
   Coprime (a * b) n
   := by
-    sorry
+    apply coprime_mul_iff_left.mpr
+    constructor
+    · exact ha
+    · exact hb
 lemma coprime_mod {a n : ℕ} (ha : Coprime a n) :
   Coprime (a % n) n
   := by
-    sorry
-lemma coprime_ne_zero {a n : ℕ} (h : Coprime a n) :
-  a ≠ 0
-  := by
-    sorry
-lemma coprime_ne {a n : ℕ} (h : Coprime a n) (hn : n > 1) :
-  a ≠ n
-  := by
-    sorry
+    rw [Coprime]
+    cases n
+    · rw [mod_zero, Nat.gcd_zero_right]
+      apply (coprime_zero_right a).mp ha
+    · rw [← gcd_succ, ← Coprime, coprime_comm] 
+      exact ha
 
 def Nat.coprimes (n : ℕ) : Finset ℕ
   := filter (fun x => Coprime x n) (range n)
@@ -140,8 +140,15 @@ theorem euler's_totient_theorem {a m : ℕ} (hm : m > 0) (ha : Coprime a m) :
                                                   rw [prod_image, prod_nat_mod]
                                                   congr
       _ ≡ ∏ c in m.coprimes, c [MOD m]          := by rw [this]
-    
-    sorry
+    have h_prod : Coprime (∏ c in coprimes m, c) m := by
+      apply Coprime.prod_left
+      rintro c hc
+      apply mem_coprimes₁ hc
+    apply ModEq.cancel_right_of_coprime (c := ∏ x in coprimes m, x)
+    · rw [← Coprime]
+      apply coprime_comm.mpr h_prod
+    · rw [one_mul]
+      exact this
 
 theorem fermat's_little_theorem {a p : ℕ} (hp : p.Prime) (ha : Coprime a p) :
   a^(p-1) ≡ 1 [MOD p]
