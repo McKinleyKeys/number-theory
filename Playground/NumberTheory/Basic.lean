@@ -6,6 +6,107 @@ open Nat Finset BigOperators
 
 
 /-
+ - Parity
+ -/
+
+lemma even_iff_eq_two_mul (n : ℕ) :
+  Even n ↔ ∃ k, n = 2 * k
+  := calc
+    Even n ↔ n % 2 = 0      := Nat.even_iff
+    _ ↔ 2 ∣ n               := by symm; apply dvd_iff_mod_eq_zero
+    _ ↔ ∃ k, n = 2 * k      := dvd_iff_exists_eq_mul_right
+
+lemma even_add_even {a b : ℕ} (ha : Even a) (hb : Even b) :
+  Even (a + b)
+  := by
+    apply even_add.mpr
+    apply iff_of_true ha hb
+lemma even_add_odd {a b : ℕ} (ha : Even a) (hb : Odd b) :
+  Odd (a + b)
+  := by
+    rw [add_comm]
+    apply odd_add.mpr
+    apply iff_of_true hb ha
+lemma odd_add_even {a b : ℕ} (ha : Odd a) (hb : Even b) :
+  Odd (a + b)
+  := by
+    apply odd_add.mpr
+    apply iff_of_true ha hb
+lemma odd_add_odd {a b : ℕ} (ha : Odd a) (hb : Odd b) :
+  Even (a + b)
+  := by
+    apply even_add.mpr
+    apply iff_of_false
+    · apply odd_iff_not_even.mp ha
+    · apply odd_iff_not_even.mp hb
+
+lemma one_le_of_odd {n : ℕ} (h : Odd n) :
+  1 ≤ n
+  := by
+    apply one_le_iff_ne_zero.mpr
+    contrapose h
+    apply even_iff_not_odd.mp
+    apply not_ne_iff.mp at h
+    rw [h]
+    apply even_zero
+lemma zero_lt_of_odd {n : ℕ} (h : Odd n) :
+  0 < n
+  := by
+    sorry
+
+lemma odd_iff_eq_even_add_one {n : ℕ} :
+  Odd n ↔ ∃ k, Even k ∧ n = k + 1
+  := by
+    constructor
+    · intro hn
+      use n - 1
+      constructor
+      · apply Nat.Odd.sub_odd hn odd_one
+      · rw [← Nat.sub_add_comm (one_le_of_odd hn)]
+        simp
+    · rintro ⟨k, ⟨hk, hn⟩⟩
+      rw [hn]
+      apply even_add_odd hk odd_one
+
+
+/-
+ - Miscellaneous
+ -/
+
+lemma sub_sub' {a b c : ℕ} (h : c ≤ b) :
+  a - (b - c) = a + c - b
+  := by
+    induction' b with d hd
+    · rw [Nat.sub_zero, Nat.zero_sub, Nat.sub_zero]
+      apply le_zero.mp at h
+      rw [h, add_zero]
+    · by_cases hc : c = succ d
+      · simp [hc]
+      · apply lt_of_le_of_ne h at hc
+        apply le_of_lt_succ at hc
+        rw [sub_succ, succ_sub hc, sub_succ]
+        apply hd at hc
+        rw [hc]
+
+lemma sub_one_sq {n : ℕ} (h : n > 0) :
+  (n-1)^2 = n^2 + 1 - 2*n
+  := by
+    apply one_le_of_lt at h
+    rw [
+      pow_two,
+      Nat.mul_sub_left_distrib,
+      Nat.mul_sub_right_distrib,
+      mul_one,
+      one_mul,
+      ← pow_two,
+      Nat.sub_right_comm,
+      sub_sub' h,
+      Nat.sub_sub,
+    ]
+    ring_nf
+
+
+/-
  - Custom Operators
  -/
 
@@ -21,6 +122,31 @@ notation:50 a:50 " ∤ " b:50 => NotDvd a b
 /-
  - Modular Equality
  -/
+
+lemma ModEq.add_left_erase {a b m : ℕ} (h : m + a ≡ b [MOD m]) :
+  a ≡ b [MOD m]
+  := by
+    sorry
+lemma ModEq.add_left_mul_erase {a b m k : ℕ} (h : k*m + a ≡ b [MOD m]) :
+  a ≡ b [MOD m]
+  := by
+    sorry
+lemma ModEq.add_left_pow_erase {a b m k : ℕ} (hk : k > 0) (h : m^k + a ≡ b [MOD m]) :
+  a ≡ b [MOD m]
+  := by
+    sorry
+lemma ModEq.sub_erase {a b m : ℕ} (h : a - m ≡ b [MOD m]) :
+  a ≡ b [MOD m]
+  := by
+    sorry
+lemma ModEq.sub_mul_erase {a b m k : ℕ} (h : a - k*m ≡ b [MOD m]) :
+  a ≡ b [MOD m]
+  := by
+    sorry
+lemma ModEq.sub_pow_erase {a b m k : ℕ} (h : a - m^k ≡ b [MOD m]) (hk : k > 0) :
+  a ≡ b [MOD m]
+  := by
+    sorry
 
 /- TODO: Consider removing -/
 lemma ModEq.eq_of_le_of_le {a b m : ℕ} (h : a ≡ b [MOD m]) (ha : 1 ≤ a ∧ a ≤ m) (hb : 1 ≤ b ∧ b ≤ m) :
@@ -46,7 +172,17 @@ lemma ModEq.eq_of_le_of_le {a b m : ℕ} (h : a ≡ b [MOD m]) (ha : 1 ≤ a ∧
 
 
 /-
- - Coprimality
+ - Primes
+ -/
+
+lemma Nat.Prime.two_dvd {p : ℕ} (hp : p.Prime) (hp' : p > 2) :
+  2 ∣ (p-1)
+  := by
+    sorry
+
+
+/-
+ - Coprimes
  -/
 
 lemma coprime_mul {a b n : ℕ} (ha : Coprime a n) (hb : Coprime b n) :
