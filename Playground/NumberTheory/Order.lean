@@ -5,7 +5,7 @@ import Playground.NumberTheory.Basic
 
 open Nat Finset BigOperators
 
-lemma exists_ord (a m : ℕ) (ha : Coprime a m) :
+lemma exists_ord {a m : ℕ} (ha : Coprime a m) :
   ∃ d > 0, a^d ≡ 1 [MOD m]
   := by
     by_cases hm : m = 0
@@ -26,7 +26,7 @@ lemma exists_ord (a m : ℕ) (ha : Coprime a m) :
 
 def ord (a m : ℕ) : ℕ :=
   if hm : Coprime a m then
-    Nat.find (exists_ord a m hm)
+    Nat.find (exists_ord hm)
   else
     0
 
@@ -35,7 +35,7 @@ lemma ord_pos {a m : ℕ} (hm : Coprime a m) :
   := by
     have : (ord a m) > 0 ∧ a^(ord a m) ≡ 1 [MOD m] := by
       rw [ord, dite_true' hm]
-      apply Nat.find_spec (exists_ord a m hm)
+      apply Nat.find_spec (exists_ord hm)
     rcases this with ⟨left, _⟩
     exact left
 
@@ -45,7 +45,7 @@ lemma pow_ord {a m : ℕ} :
     by_cases hm : (Coprime a m)
     · have : (ord a m) > 0 ∧ a^(ord a m) ≡ 1 [MOD m] := by
         rw [ord, dite_true' hm]
-        apply Nat.find_spec (exists_ord a m hm)
+        apply Nat.find_spec (exists_ord hm)
       rcases this with ⟨_, right⟩
       exact right
     · rw [ord, dite_false' hm, Nat.pow_zero]
@@ -53,7 +53,18 @@ lemma pow_ord {a m : ℕ} :
 lemma ord_min {a n m : ℕ} (hn : 0 < n ∧ n < ord a m) :
   a^n ≢ 1 [MOD m]
   := by
-    sorry
+    rcases hn with ⟨hn₁, hn₂⟩
+    rw [ord] at hn₂
+    by_cases ha : Coprime a m
+    · rw [dite_true' ha] at hn₂
+      apply Nat.find_min at hn₂
+      apply not_and_or.mp at hn₂
+      rcases hn₂ with left | right
+      · contradiction
+      · exact right
+    · exfalso
+      rw [dite_false' ha] at hn₂
+      contradiction
 
 
 /-
@@ -61,22 +72,31 @@ lemma ord_min {a n m : ℕ} (hn : 0 < n ∧ n < ord a m) :
  -/
 
 @[reducible]
-def PrimitiveRoot (a p : ℕ) :=
-  ord a p = p - 1
+def PrimitiveRoot (a m : ℕ) :=
+  ord a m = m - 1
 
-def Nat.primitive_roots (p : ℕ) : Finset ℕ
-  := filter (fun x => PrimitiveRoot x p) (range p)
+def Nat.primitive_roots (m : ℕ) : Finset ℕ
+  := filter (fun x => PrimitiveRoot x m) (range m)
 
-lemma primitive_root_min {r n p : ℕ} (hp : p.Prime) (hr : PrimitiveRoot r p) (hn : 0 < n ∧ n < p-1) :
-  r^n ≢ 1 [MOD p]
+lemma primitive_root_min {r n m : ℕ} (hr : PrimitiveRoot r m) (hn : 0 < n ∧ n < m-1) :
+  r^n ≢ 1 [MOD m]
   := by
-    
-    sorry
+    rw [PrimitiveRoot] at hr
+    rw [← hr] at hn
+    apply ord_min hn
 
-lemma coprime_of_primitive_root {r p : ℕ} (hp : p.Prime) (hr : PrimitiveRoot r p) :
+theorem coprime_of_primitive_root {r m : ℕ} (hm : 1 < m) (hr : PrimitiveRoot r m) :
+  Coprime r m
+  := by
+    contrapose hr
+    rw [PrimitiveRoot, ord, dite_false' hr]
+    have : 0 < m - 1 := by
+      simp [hm]
+    apply Nat.ne_of_lt this
+theorem Nat.Prime.coprime_of_primitive_root {r p : ℕ} (hp : p.Prime) (hr : PrimitiveRoot r p) :
   Coprime r p
   := by
-    sorry
+    apply _root_.coprime_of_primitive_root (Prime.one_lt hp) hr
 
 theorem ord_dvd_p_sub_one {a p : ℕ} (hp : p.Prime) (ha : Coprime a p) :
   (ord a p) ∣ p-1
