@@ -6,10 +6,53 @@ open Nat Finset BigOperators
 
 
 /-
+ - Miscellaneous
+ -/
+
+lemma pos_iff_one_le {n : ℕ} :
+  0 < n ↔ 1 ≤ n
+  := calc
+    0 < n ↔ n ≠ 0       := pos_iff_ne_zero
+    _     ↔ 1 ≤ n       := by symm; apply one_le_iff_ne_zero
+
+lemma sub_sub' {a b c : ℕ} (h : c ≤ b) :
+  a - (b - c) = a + c - b
+  := by
+    induction' b with d hd
+    · rw [Nat.sub_zero, Nat.zero_sub, Nat.sub_zero]
+      apply le_zero.mp at h
+      rw [h, add_zero]
+    · by_cases hc : c = succ d
+      · simp [hc]
+      · apply lt_of_le_of_ne h at hc
+        apply le_of_lt_succ at hc
+        rw [sub_succ, succ_sub hc, sub_succ]
+        apply hd at hc
+        rw [hc]
+
+lemma sub_one_sq {n : ℕ} (h : n > 0) :
+  (n-1)^2 = n^2 + 1 - 2*n
+  := by
+    apply one_le_of_lt at h
+    rw [
+      pow_two,
+      Nat.mul_sub_left_distrib,
+      Nat.mul_sub_right_distrib,
+      mul_one,
+      one_mul,
+      ← pow_two,
+      Nat.sub_right_comm,
+      sub_sub' h,
+      Nat.sub_sub,
+    ]
+    ring_nf
+
+
+/-
  - Parity
  -/
 
-lemma even_iff_eq_two_mul (n : ℕ) :
+lemma even_iff_eq_two_mul {n : ℕ} :
   Even n ↔ ∃ k, n = 2 * k
   := calc
     Even n ↔ n % 2 = 0      := Nat.even_iff
@@ -49,10 +92,14 @@ lemma one_le_of_odd {n : ℕ} (h : Odd n) :
     apply not_ne_iff.mp at h
     rw [h]
     apply even_zero
-lemma zero_lt_of_odd {n : ℕ} (h : Odd n) :
+lemma pos_of_odd {n : ℕ} (h : Odd n) :
   0 < n
-  := by
-    sorry
+  :=
+    pos_iff_one_le.mpr (one_le_of_odd h)
+lemma ne_zero_of_odd {n : ℕ} (h : Odd n) :
+  n ≠ 0
+  :=
+    one_le_iff_ne_zero.mp (one_le_of_odd h)
 
 lemma odd_iff_eq_even_add_one {n : ℕ} :
   Odd n ↔ ∃ k, Even k ∧ n = k + 1
@@ -67,43 +114,6 @@ lemma odd_iff_eq_even_add_one {n : ℕ} :
     · rintro ⟨k, ⟨hk, hn⟩⟩
       rw [hn]
       apply even_add_odd hk odd_one
-
-
-/-
- - Miscellaneous
- -/
-
-lemma sub_sub' {a b c : ℕ} (h : c ≤ b) :
-  a - (b - c) = a + c - b
-  := by
-    induction' b with d hd
-    · rw [Nat.sub_zero, Nat.zero_sub, Nat.sub_zero]
-      apply le_zero.mp at h
-      rw [h, add_zero]
-    · by_cases hc : c = succ d
-      · simp [hc]
-      · apply lt_of_le_of_ne h at hc
-        apply le_of_lt_succ at hc
-        rw [sub_succ, succ_sub hc, sub_succ]
-        apply hd at hc
-        rw [hc]
-
-lemma sub_one_sq {n : ℕ} (h : n > 0) :
-  (n-1)^2 = n^2 + 1 - 2*n
-  := by
-    apply one_le_of_lt at h
-    rw [
-      pow_two,
-      Nat.mul_sub_left_distrib,
-      Nat.mul_sub_right_distrib,
-      mul_one,
-      one_mul,
-      ← pow_two,
-      Nat.sub_right_comm,
-      sub_sub' h,
-      Nat.sub_sub,
-    ]
-    ring_nf
 
 
 /-
@@ -176,14 +186,55 @@ lemma ModEq.eq_of_le_of_le {a b m : ℕ} (h : a ≡ b [MOD m]) (ha : 1 ≤ a ∧
  -/
 
 lemma Nat.Prime.two_dvd {p : ℕ} (hp : p.Prime) (hp' : p > 2) :
-  2 ∣ (p-1)
+  2 ∣ p-1
   := by
     sorry
+
+lemma Nat.Prime.dvd_iff_dvd_pow {a b p : ℕ} (hp : p.Prime) (hb : b > 0) :
+  p ∣ a ↔ p ∣ a^b
+  := by
+    constructor
+    · intro h
+      apply dvd_pow h (Nat.pos_iff_ne_zero.mp hb)
+    · apply Prime.dvd_of_dvd_pow hp
 
 
 /-
  - Coprimes
  -/
+
+lemma exists_dvd_of_not_coprime {a b : ℕ} (h : ¬Coprime a b) :
+  ∃ d > 1, d ∣ a ∧ d ∣ b
+  := by
+    by_cases ha : a = 0
+    · by_cases hb : b = 0
+      · use 2
+        rw [ha, hb]
+        simp
+      · use b
+        constructor
+        · apply one_lt_iff_ne_zero_and_ne_one.mpr
+          constructor
+          · apply hb
+          · contrapose h
+            apply not_ne_iff.mp at h
+            rw [not_not, ha]
+            apply (coprime_zero_left b).mpr h
+        · rw [ha]
+          simp
+    · use Nat.gcd a b
+      constructor
+      · rw [Coprime] at h
+        apply one_lt_iff_ne_zero_and_ne_one.mpr
+        constructor
+        · contrapose ha
+          apply not_ne_iff.mp at ha
+          apply Nat.gcd_eq_zero_iff.mp at ha
+          rcases ha with ⟨left, _⟩
+          rw [not_not]
+          exact left
+        · apply h
+      · apply Nat.gcd_dvd
 
 lemma coprime_mul {a b n : ℕ} (ha : Coprime a n) (hb : Coprime b n) :
   Coprime (a * b) n
@@ -201,6 +252,31 @@ lemma coprime_mod {a n : ℕ} (ha : Coprime a n) :
       apply (coprime_zero_right a).mp ha
     · rw [← gcd_succ, ← Coprime, coprime_comm] 
       exact ha
+lemma coprime_pow_iff {a b n : ℕ} (hb : b > 0) :
+  Coprime (a^b) n ↔ Coprime a n
+  := by
+    constructor
+    · contrapose
+      intro h
+      apply exists_dvd_of_not_coprime at h
+      rcases h with ⟨d, hd, ⟨ha, hn⟩⟩
+      apply pos_iff_ne_zero.mp at hb
+      apply dvd_pow (n := b) at ha
+      apply ha at hb
+      apply not_coprime_of_dvd_of_dvd hd hb hn
+    · intro h
+      rw [pow_eq_prod_const]
+      apply Coprime.prod_left
+      rintro _ _
+      apply h
+lemma coprime_pow {a b n : ℕ} (ha : Coprime a n) :
+  Coprime (a^b) n
+  := by
+    by_cases hb : b = 0
+    · rw [hb, Nat.pow_zero]
+      apply coprime_one_left
+    · apply pos_iff_ne_zero.mpr at hb
+      apply (coprime_pow_iff hb).mpr ha
 
 def Nat.coprimes (n : ℕ) : Finset ℕ
   := filter (fun x => Coprime x n) (range n)
