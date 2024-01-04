@@ -98,6 +98,11 @@ theorem Nat.Prime.coprime_of_primitive_root {r p : ℕ} (hp : p.Prime) (hr : Pri
   := by
     apply _root_.coprime_of_primitive_root (Prime.one_lt hp) hr
 
+theorem ord_dvd_of_pow_cong_one {a b m : ℕ} (h : a^b ≡ 1 [MOD m]) :
+  ord a m ∣ b
+  := by
+    sorry
+
 theorem ord_dvd_p_sub_one {a p : ℕ} (hp : p.Prime) (ha : Coprime a p) :
   (ord a p) ∣ p-1
   := by
@@ -136,22 +141,70 @@ theorem ord_dvd_p_sub_one {a p : ℕ} (hp : p.Prime) (ha : Coprime a p) :
     · exfalso
       contradiction
 
-theorem ord_pow {a b m : ℕ} :
-  ord (a^b) m = (ord a m) / (Nat.gcd b m)
+/-
+ - Page 92 of https://resources.saylor.org/wwwresources/archived/site/wp-content/uploads/2013/05/An-Introductory-in-Elementary-Number-Theory.pdf
+ -/
+theorem ord_pow {a b m : ℕ} (hb : 0 < b):
+  ord (a^b) m = (ord a m) / (Nat.gcd b (ord a m))
   := by
-    sorry
+    let t := ord a m
+    let g := Nat.gcd b t
+    let t' := t / g
+    let b' := b / g
+    let x := ord (a^b) m
+    show x = t'
+    have g_pos : 0 < g := Nat.gcd_pos_of_pos_left _ hb
+    have g_dvd_b : g ∣ b := by apply Nat.gcd_dvd_left
+    have g_dvd_t : g ∣ t := by apply Nat.gcd_dvd_right
+    have t'_b' : Coprime t' b' := by
+      unfold_let t' b' g
+      apply coprime_comm.mp
+      apply coprime_div_gcd_div_gcd
+      apply g_pos
+    have h₁ : (a^b)^t' ≡ 1 [MOD m] := calc
+      (a^b)^t'
+      _ = (a^(b' * g))^(t / g)      := by
+                                      unfold_let b' t'
+                                      rw [Nat.div_mul_cancel g_dvd_b]
+      _ = (a^t)^b'                  := by
+                                      rw [
+                                        ← pow_mul,
+                                        mul_assoc,
+                                        ← Nat.mul_div_assoc _ g_dvd_t,
+                                        Nat.mul_div_cancel_left _ g_pos,
+                                        pow_mul'
+                                      ]
+      _ ≡ 1^b' [MOD m]              := by
+                                      apply ModEq.pow
+                                      apply pow_ord
+      _ = 1                         := one_pow _
+    have h₂ : t' ∣ x := by
+      have : a^(b*x) ≡ 1 [MOD m] := calc
+        a^(b*x)
+        _ = (a^b)^x                 := by apply pow_mul
+        _ ≡ 1 [MOD m]               := pow_ord
+      apply ord_dvd_of_pow_cong_one at this
+      have : t'*g ∣ b'*g*x := by
+        unfold_let t' b'
+        rw [Nat.div_mul_cancel g_dvd_t, Nat.div_mul_cancel g_dvd_b]
+        exact this
+      rw [mul_comm, mul_comm b', mul_assoc] at this
+      apply Nat.dvd_of_mul_dvd_mul_left g_pos at this
+      apply (Coprime.dvd_mul_left t'_b').mp this
+    apply ord_dvd_of_pow_cong_one at h₁
+    apply dvd_antisymm h₁ h₂
 
-theorem ord_pow_eq_iff_coprime {a b m : ℕ} (ha : Coprime a m) :
-  ord (a^b) m = ord a m ↔ Coprime b m
-  := calc
-    ord (a^b) m = ord a m
-    _ ↔ (ord a m) / (Nat.gcd b m) = ord a m     := by rw [ord_pow]
-    _ ↔ ord a m = 0 ∨ Nat.gcd b m = 1           := Nat.div_eq_self
-    _ ↔ Nat.gcd b m = 1                         := by
-                                                  have : ord a m ≠ 0 := pos_iff_ne_zero.mp (ord_pos ha)
-                                                  rw [eq_false this]
-                                                  apply false_or_iff
-    _ ↔ Coprime b m                             := by apply Nat.coprime_iff_gcd_eq_one
+-- theorem ord_pow_eq_iff_coprime {a b m : ℕ} (ha : Coprime a m) :
+--   ord (a^b) m = ord a m ↔ Coprime b m
+--   := calc
+--     ord (a^b) m = ord a m
+--     _ ↔ (ord a m) / (Nat.gcd b m) = ord a m     := by rw [ord_pow]
+--     _ ↔ ord a m = 0 ∨ Nat.gcd b m = 1           := Nat.div_eq_self
+--     _ ↔ Nat.gcd b m = 1                         := by
+--                                                   have : ord a m ≠ 0 := pos_iff_ne_zero.mp (ord_pos ha)
+--                                                   rw [eq_false this]
+--                                                   apply false_or_iff
+--     _ ↔ Coprime b m                             := by apply Nat.coprime_iff_gcd_eq_one
 
 theorem ord_pow_of_coprime {a b m : ℕ} (hb : Coprime b m) :
   ord (a^b) m = ord a m
