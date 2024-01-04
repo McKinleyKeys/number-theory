@@ -115,6 +115,15 @@ lemma odd_iff_eq_even_add_one {n : ℕ} :
       rw [hn]
       apply even_add_odd hk odd_one
 
+lemma even_sub_one_of_odd {n : ℕ} (hn : Odd n) :
+  Even (n - 1)
+  := by
+    apply odd_iff_eq_even_add_one.mp at hn
+    rcases hn with ⟨k, hk, h⟩
+    rw [h]
+    simp
+    exact hk
+
 
 /-
  - Custom Operators
@@ -135,30 +144,54 @@ notation:50 a:50 " ∤ " b:50 => NotDvd a b
  - Modular Equality
  -/
 
-lemma ModEq.add_left_erase {a b m : ℕ} (h : m + a ≡ b [MOD m]) :
-  a ≡ b [MOD m]
+lemma ModEq.card {m : ℕ} :
+  m ≡ 0 [MOD m]
+  := by
+    apply Dvd.dvd.modEq_zero_nat (dvd_refl m)
+lemma ModEq.mul_card {k m : ℕ} :
+  k * m ≡ 0 [MOD m]
+  := by
+    apply Dvd.dvd.modEq_zero_nat (dvd_mul_left m k)
+lemma ModEq.card_pow {m k : ℕ} (hk : k > 0) :
+  m^k ≡ 0 [MOD m]
+  := by
+    apply pos_iff_ne_zero.mp at hk
+    apply Dvd.dvd.modEq_zero_nat
+    apply dvd_pow (dvd_refl m) hk
+
+lemma ModEq.add_left_erase {a b m : ℕ} :
+  m + a ≡ b [MOD m] ↔ a ≡ b [MOD m]
   := by
     sorry
-lemma ModEq.add_left_mul_erase {a b m k : ℕ} (h : k*m + a ≡ b [MOD m]) :
-  a ≡ b [MOD m]
+lemma ModEq.add_left_mul_erase {a b m k : ℕ} :
+  k*m + a ≡ b [MOD m] ↔ a ≡ b [MOD m]
   := by
     sorry
-lemma ModEq.add_left_pow_erase {a b m k : ℕ} (hk : k > 0) (h : m^k + a ≡ b [MOD m]) :
-  a ≡ b [MOD m]
+lemma ModEq.add_left_pow_erase {a b m k : ℕ} (hk : k > 0) :
+  m^k + a ≡ b [MOD m] ↔ a ≡ b [MOD m]
   := by
     sorry
-lemma ModEq.sub_erase {a b m : ℕ} (h : a - m ≡ b [MOD m]) :
-  a ≡ b [MOD m]
+lemma ModEq.sub_erase {a b m : ℕ} :
+  a - m ≡ b [MOD m] ↔ a ≡ b [MOD m]
   := by
     sorry
-lemma ModEq.sub_mul_erase {a b m k : ℕ} (h : a - k*m ≡ b [MOD m]) :
-  a ≡ b [MOD m]
+lemma ModEq.sub_mul_erase {a b m k : ℕ} :
+  a - k*m ≡ b [MOD m] ↔ a ≡ b [MOD m]
   := by
     sorry
-lemma ModEq.sub_pow_erase {a b m k : ℕ} (h : a - m^k ≡ b [MOD m]) (hk : k > 0) :
-  a ≡ b [MOD m]
+lemma ModEq.sub_pow_erase {a b m k : ℕ} (hk : k > 0) :
+  a - m^k ≡ b [MOD m] ↔ a ≡ b [MOD m]
   := by
     sorry
+
+lemma ModEq.mod_zero_iff {a b : ℕ} :
+  a ≡ b [MOD 0] ↔ a = b
+  := by
+    rw [ModEq, mod_zero, mod_zero]
+lemma ModEq.not_mod_zero_iff {a b : ℕ} :
+  a ≢ b [MOD 0] ↔ a ≠ b
+  := by
+    rw [NotModEq, ModEq, mod_zero, mod_zero]
 
 /- TODO: Consider removing -/
 lemma ModEq.eq_of_le_of_le {a b m : ℕ} (h : a ≡ b [MOD m]) (ha : 1 ≤ a ∧ a ≤ m) (hb : 1 ≤ b ∧ b ≤ m) :
@@ -190,7 +223,11 @@ lemma ModEq.eq_of_le_of_le {a b m : ℕ} (h : a ≡ b [MOD m]) (ha : 1 ≤ a ∧
 lemma Nat.Prime.two_dvd {p : ℕ} (hp : p.Prime) (hp' : p > 2) :
   2 ∣ p-1
   := by
-    sorry
+    apply ne_of_lt at hp'
+    symm at hp'
+    apply Prime.odd_of_ne_two hp at hp'
+    apply even_sub_one_of_odd at hp'
+    apply even_iff_two_dvd.mp hp'
 
 lemma Nat.Prime.dvd_iff_dvd_pow {a b p : ℕ} (hp : p.Prime) (hb : b > 0) :
   p ∣ a ↔ p ∣ a^b
