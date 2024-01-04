@@ -120,10 +120,12 @@ lemma odd_iff_eq_even_add_one {n : ℕ} :
  - Custom Operators
  -/
 
+@[simp]
 def NotModEq (n a b : ℕ) :=
   ¬(a ≡ b [MOD n])
 notation:50 a:50 " ≢ " b:50 " [MOD " n:50 "]" => NotModEq n a b
 
+@[simp]
 def NotDvd (a b : ℕ) :=
   ¬(a ∣ b)
 notation:50 a:50 " ∤ " b:50 => NotDvd a b
@@ -252,6 +254,22 @@ lemma coprime_mod {a n : ℕ} (ha : Coprime a n) :
       apply (coprime_zero_right a).mp ha
     · rw [← gcd_succ, ← Coprime, coprime_comm] 
       exact ha
+lemma coprime_mod_iff {a n : ℕ} :
+  Coprime a n ↔ Coprime (a % n) n
+  := by
+    constructor
+    · exact coprime_mod
+    · intro h
+      rw [Coprime, ← gcd_rec, Nat.gcd_comm] at h
+      rw [Coprime, h]
+lemma coprime_mod_eq {a b m : ℕ} (h : a ≡ b [MOD m]) (ha : Coprime a m) :
+  Coprime b m
+  := by
+    rw [ModEq] at h
+    apply coprime_mod_iff.mp at ha
+    rw [h] at ha
+    apply coprime_mod_iff.mpr at ha
+    exact ha
 lemma coprime_pow_iff {a b n : ℕ} (hb : b > 0) :
   Coprime (a^b) n ↔ Coprime a n
   := by
@@ -277,6 +295,25 @@ lemma coprime_pow {a b n : ℕ} (ha : Coprime a n) :
       apply coprime_one_left
     · apply pos_iff_ne_zero.mpr at hb
       apply (coprime_pow_iff hb).mpr ha
+
+lemma not_coprime_iff_cong_zero {a p : ℕ} (hp : p.Prime) :
+  ¬Coprime a p ↔ a ≡ 0 [MOD p]
+  := calc
+    ¬Coprime a p
+    _ ↔ p ∣ a           := by
+                          symm
+                          rw [coprime_comm]
+                          apply Prime.dvd_iff_not_coprime hp
+    _ ↔ a ≡ 0 [MOD p]   := by
+                          dsimp only [ModEq]
+                          rw [zero_mod]
+                          apply dvd_iff_mod_eq_zero
+lemma coprime_iff_ncong_zero {a p : ℕ} (hp : p.Prime) :
+  Coprime a p ↔ a ≢ 0 [MOD p]
+  := by
+    apply not_iff_not.mp
+    rw [NotModEq, Classical.not_not]
+    apply not_coprime_iff_cong_zero hp
 
 def Nat.coprimes (n : ℕ) : Finset ℕ
   := filter (fun x => Coprime x n) (range n)
