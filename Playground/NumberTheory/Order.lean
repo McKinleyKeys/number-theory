@@ -51,7 +51,7 @@ lemma pow_ord {a m : ℕ} :
     · rw [ord, dite_false' hm, Nat.pow_zero]
 
 lemma ord_min {a n m : ℕ} (hn : 0 < n ∧ n < ord a m) :
-  a^n ≡ 1 [MOD m]
+  a^n ≢ 1 [MOD m]
   := by
     sorry
 
@@ -121,15 +121,38 @@ theorem ord_pow {a b m : ℕ} :
   := by
     sorry
 
-theorem ord_pow_eq_iff_coprime {a b m : ℕ} :
+theorem ord_pow_eq_iff_coprime {a b m : ℕ} (ha : Coprime a m) :
   ord (a^b) m = ord a m ↔ Coprime b m
-  := by
-    sorry
+  := calc
+    ord (a^b) m = ord a m
+    _ ↔ (ord a m) / (Nat.gcd b m) = ord a m     := by rw [ord_pow]
+    _ ↔ ord a m = 0 ∨ Nat.gcd b m = 1           := Nat.div_eq_self
+    _ ↔ Nat.gcd b m = 1                         := by
+                                                  have : ord a m ≠ 0 := pos_iff_ne_zero.mp (ord_pos ha)
+                                                  rw [eq_false this]
+                                                  apply false_or_iff
+    _ ↔ Coprime b m                             := by apply Nat.coprime_iff_gcd_eq_one
 
 theorem ord_pow_of_coprime {a b m : ℕ} (hb : Coprime b m) :
   ord (a^b) m = ord a m
   := by
-    sorry
+    by_cases ha : Coprime a m
+    · apply (ord_pow_eq_iff_coprime ha).mpr hb
+    · by_cases hb' : b = 0
+      · exfalso
+        rw [hb'] at hb
+        apply (coprime_zero_left m).mp at hb
+        rw [hb] at ha
+        have : Coprime a 1 := coprime_one_right a
+        contradiction
+      · apply pos_iff_ne_zero.mpr at hb'
+        rw [ord, ord]
+        have hab : ¬Coprime (a^b) m := by
+          contrapose ha
+          rw [not_not]
+          rw [not_not] at ha
+          apply (coprime_pow_iff hb').mp ha
+        rw [dite_false' ha, dite_false' hab]
 
 -- The number of elements of order t is totient(t)
 theorem ord_count {p t : ℕ} (hp : p.Prime) (ht : t ∣ p-1) :
