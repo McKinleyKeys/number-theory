@@ -59,7 +59,7 @@ theorem mckinley's (a p : ℕ) (hp : p.Prime) (h : ∃ k, p = 2^k + 1) :
     · exfalso
       have : p - 1 ≡ 1 [MOD p] := calc
         p - 1 = legendre a p              := by rw [← legendre_qnr_eq_p_sub_one a_qnr]
-        _     ≡ a^((p-1)/2) [MOD p]       := legendre_cong_pow_p_sub_one_div_two hp
+        _     ≡ a^((p-1)/2) [MOD p]       := legendre_cong hp
         _     = (a^2^r)^2^(k-r-1)         := by
                                             rw [h]
                                             ring_nf
@@ -99,75 +99,3 @@ theorem mckinley's (a p : ℕ) (hp : p.Prime) (h : ∃ k, p = 2^k + 1) :
       rw [hr, r_eq_k]
       congr
     exact this
-
-
-
--- Turn hp into a Fact so that ord will be defined
-    -- apply fact_iff.mpr at hp
-
-
-/-
-p = 7
-
-d   = 0 1 2 3 4 5 6 7 8 9
-1^d = 1 1 1 1 1 1 1 1 1 1         period = 1
-2^d = 1 2 4 1 2 4 1 2 4 1         period = 3
-3^d = 1 3 2 6 4 5 1 3 2 6 4 5     period = 6
-4^d = 1 4 2 1 4 2 1 4 2 1 4 2     period = 3
-5^d = 1 5 4 6 2 3 1 5 4 6 2 3     period = 6
-6^d = 1 6 1 6 1 6 1 6 1 6 1 6     period = 2
-
-When p is prime, the period always divides p - 1
-A primitive root is a value whose period is p - 1
-
-a     a^2
-0     0
-1     1
-2     4
-3     2
-4     2
-5     4
-6     1
-7     0
-8     1
-9     4
-
-Present: 0, 1, 2, 4     (quadratic residues)
-Not present: 3, 5, 6    (quadratic nonresidues)
-
-
-p = 5 = 2^2 + 1
-
-d   = 0 1 2 3 4
-1^d = 1 1 1 1 1 1 1 1     period: 1
-2^d = 1 2 4 3 1 2 4 3     period: 4
-3^d = 1 3 4 2 1 3 4 2     period: 4
-4^d = 1 4 1 4 1 4 1 4     period: 2
-
-Primitive roots: 2, 3
-
-a     a^2
-0     0
-1     1
-2     4
-3     4
-4     1
-5     0
-
-Present: 0, 1, 4     (quadratic residues)
-Not present: 2, 3    (quadratic nonresidues)
-
-
-p = 2
-
-a   a^2
-0   0
-1   1
-2   0
-3   1
-
-0 1 are quadratic residues
-
-
-
--/

@@ -1,8 +1,51 @@
 
 import Mathlib
 import Playground.Logic
+import Playground.NumberTheory.Basic
+import Playground.NumberTheory.Order
 
 open Nat
+
+
+lemma two_sqrts {a p : ℕ} (hp : p.Prime) :
+  ∀ x y : ℕ, x^2 ≡ a [MOD p] ∧ y^2 ≡ a [MOD p] → x ≡ y [MOD p] ∨ x + y ≡ p [MOD p]
+  := by
+    /- Use x^2 - y^2 -/
+    sorry
+
+lemma sqrt_one {x p : ℕ} (hp : p.Prime) :
+  x^2 ≡ 1 [MOD p] → x ≡ 1 [MOD p] ∨ x ≡ p - 1 [MOD p]
+  := by
+    sorry
+
+lemma neg_one_sq_cong_one {m : ℕ} (h : m > 0) :
+  (m-1)^2 ≡ 1 [MOD m]
+  := calc
+    (m-1)^2
+    _ = m^2 + 1 - 2*m       := sub_one_sq h
+    _ ≡ 1 [MOD m]           := by
+                              apply ModEq.add_left_pow_erase two_pos
+                              apply ModEq.sub_mul_erase
+
+lemma neg_one_pow_even {n m : ℕ} (hm : m > 0) (hn : Even n) :
+  (m-1)^n ≡ 1 [MOD m]
+  := by
+    rcases (even_iff_eq_two_mul n).mp hn with ⟨k, hk⟩
+    rw [hk, pow_mul]
+    nth_rw 2 [← one_pow k]
+    apply ModEq.pow _ (neg_one_sq_cong_one hm)
+
+lemma neg_one_pow_odd {n m : ℕ} (hn : Odd n) :
+  (m-1)^n ≡ m-1 [MOD m]
+  := by
+    by_cases hm : m = 0
+    · rw [hm, Nat.zero_sub, zero_pow (pos_of_odd hn)]
+    · apply zero_lt_of_ne_zero at hm
+      rcases odd_iff_eq_even_add_one.mp hn with ⟨k, ⟨hk₁, hk₂⟩⟩
+      rw [hk₂, pow_add, pow_one]
+      nth_rw 3 [← one_mul (m-1)]
+      apply ModEq.mul_right (m-1)
+      apply neg_one_pow_even hm hk₁
 
 
 /-
@@ -11,11 +54,37 @@ open Nat
 
 def QuadraticResidue (a p : ℕ) :=
   ∃ b, b^2 ≡ a [MOD p]
+@[simp]
 def QuadraticNonresidue (a p : ℕ) :=
   ¬QuadraticResidue a p
 
 instance : Decidable (QuadraticResidue a b) := by
   sorry
+
+lemma qr_of_cong_zero {a m : ℕ} (ha : a ≡ 0 [MOD m]) :
+  QuadraticResidue a m
+  := by
+    use 0
+    rw [zero_pow two_pos]
+    symm
+    exact ha
+lemma qr_of_not_coprime {a p : ℕ} (hp : p.Prime) (ha : ¬Coprime a p) :
+  QuadraticResidue a p
+  := by
+    apply (not_coprime_iff_cong_zero hp).mp at ha
+    apply qr_of_cong_zero ha
+lemma ncong_zero_of_qnr {a m : ℕ} (ha : QuadraticNonresidue a m) :
+  a ≢ 0 [MOD m]
+  := by
+    contrapose ha
+    simp
+    simp at ha
+    apply qr_of_cong_zero ha
+lemma coprime_of_qnr {a p : ℕ} (hp : p.Prime) (ha : QuadraticNonresidue a p) :
+  Coprime a p
+  := by
+    apply (coprime_iff_ncong_zero hp).mpr
+    apply ncong_zero_of_qnr ha
 
 
 /-
@@ -23,17 +92,96 @@ instance : Decidable (QuadraticResidue a b) := by
  -/
 
 def legendre (a p : ℕ) : ℕ :=
-  if QuadraticResidue a p then 1 else p - 1
+  if Coprime a p then
+    if QuadraticResidue a p then
+      1
+    else
+      p - 1
+  else
+    0
 
-lemma legendre_qnr_eq_p_sub_one {a p : ℕ} (h : QuadraticNonresidue a p) :
+lemma legendre_eq_one_of_coprime_of_qr {a p : ℕ} (ha₁ : Coprime a p) (ha₂ : QuadraticResidue a p) :
+  legendre a p = 1
+  := by
+    rw [legendre, if_true' ha₁, if_true' ha₂]
+lemma legendre_eq_neg_one_of_qnr {a p : ℕ} (hp : p.Prime) (ha : QuadraticNonresidue a p) :
   legendre a p = p - 1
   := by
-    rw [legendre, if_false' h]
+    have : Coprime a p := coprime_of_qnr hp ha
+    rw [legendre, if_true' this, if_false' ha]
 
-theorem legendre_cong_pow_p_sub_one_div_two {a p : ℕ} (hp : p.Prime) :
+theorem legendre_cong {a p : ℕ} (hp : p.Prime) (hp' : p > 2) :
   legendre a p ≡ a^((p-1)/2) [MOD p]
   := by
-    sorry
+    have p_sub_one_div_two_pos : 0 < ((p-1)/2) := by
+      have : 2 ≤ p - 1 := le_sub_one_of_lt hp'
+      apply Nat.div_pos this zero_lt_two
+    by_cases ha : QuadraticResidue a p
+    · by_cases ha' : Coprime a p
+      · rw [legendre, if_true' ha', if_true' ha]
+        rcases ha with ⟨b, h⟩
+        have hb : Coprime b p := by
+          apply coprime_mod_eq h.symm at ha'
+          apply (coprime_pow_iff two_pos).mp ha'
+        calc
+        1 ≡ b^(p-1) [MOD p]       := by symm; apply fermat's_little_theorem hp hb
+        _ = (b^2)^((p-1)/2)       := by
+                                    ring_nf
+                                    congr
+                                    rw [Nat.div_mul_cancel (Prime.two_dvd hp hp')]
+        _ ≡ a^((p-1)/2) [MOD p]   := by rw [ModEq, pow_mod, pow_mod a, h]
+      · rw [legendre, if_false' ha']
+        apply (not_coprime_iff_cong_zero hp).mp at ha'
+        apply ModEq.pow ((p-1)/2) at ha'
+        rw [zero_pow p_sub_one_div_two_pos] at ha'
+        symm
+        exact ha'
+    · rw [legendre, if_false' ha]
+      /-
+        a ≡ r^k [MOD p]
+        if k is even, then a is a QR
+        if k is odd:
+          a^((p-1)/2)
+          _ = (r^k)^((p-1)/2)
+          _ = r^((p-1)/2)^k
+          _ ≡ (-1)^k
+          _ = -1
+       -/
+      have ha' : Coprime a p := coprime_of_qnr hp ha
+      rw [if_true' ha']
+      rcases (cong_primitive_root_pow hp ha') with ⟨r, _, ⟨hr, ⟨k, _, hrk⟩⟩⟩
+      by_cases hk' : Even k
+      · exfalso
+        rcases (even_iff_eq_two_mul.mp hk') with ⟨j, hj⟩
+        rw [hj, pow_mul'] at hrk
+        have : QuadraticResidue a p := by
+          use r^j
+        contradiction
+      · apply odd_iff_not_even.mpr at hk'
+        symm
+        have : (r^((p-1)/2))^2 ≡ 1 [MOD p] := by
+          ring_nf
+          rw [Nat.div_mul_cancel (Prime.two_dvd hp hp')]
+          apply fermat's_little_theorem hp (coprime_of_primitive_root hp hr)
+        have r_pow : r^((p-1)/2) ≡ p-1 [MOD p] := by
+          apply sqrt_one hp at this
+          rcases this with one | neg_one
+          · exfalso
+            have ne_one : r^((p-1)/2) ≢ 1 [MOD p] := by
+              apply primitive_root_min hp hr
+              constructor
+              · exact p_sub_one_div_two_pos
+              · apply Nat.div_lt_self _ one_lt_two
+                simp
+                linarith [hp']
+            contradiction
+          · exact neg_one
+        calc
+          a^((p-1)/2)
+          _ ≡ (r^k)^((p-1)/2) [MOD p]     := by symm; apply ModEq.pow _ hrk
+          _ = (r^((p-1)/2))^k             := by ring
+          _ ≡ (p - 1)^k [MOD p]           := ModEq.pow _ r_pow
+          _ ≡ p - 1 [MOD p]               := neg_one_pow_odd hk'
 
 
 lemma two_has_only_qrs (a : ℕ) :
