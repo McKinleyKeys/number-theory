@@ -7,16 +7,52 @@ import Playground.NumberTheory.Order
 open Nat
 
 
-lemma two_sqrts {a p : ℕ} (hp : p.Prime) :
-  ∀ x y : ℕ, x^2 ≡ a [MOD p] ∧ y^2 ≡ a [MOD p] → x ≡ y [MOD p] ∨ x + y ≡ p [MOD p]
+lemma two_sqrts {a m : ℕ} :
+  ∀ x y : ℕ, x^2 ≡ a [MOD m] → y^2 ≡ a [MOD m] → x ≡ y [MOD m] ∨ x + y ≡ 0 [MOD m]
   := by
-    /- Use x^2 - y^2 -/
-    sorry
+    rintro x y hx hy
+    wlog h : x ≥ y generalizing x y
+    · apply le_of_not_ge at h
+      specialize this y x hy hx h
+      rw [add_comm, ModEq.comm] at this
+      exact this
+    · have : (x + y) * (x - y) ≡ 0 [MOD m] := calc
+        (x + y) * (x - y)
+        _ = x^2 - y^2             := (Nat.sq_sub_sq x y).symm
+        _ ≡ 0 [MOD m]             := by
+                                    rw [ModEq] at hx hy
+                                    rw [ModEq, zero_mod]
+                                    sorry
+      have : x - y ≡ 0 [MOD m] ∨ x + y ≡ 0 [MOD m] := by
+        sorry
+      sorry
 
-lemma sqrt_one {x p : ℕ} (hp : p.Prime) :
-  x^2 ≡ 1 [MOD p] → x ≡ 1 [MOD p] ∨ x ≡ p - 1 [MOD p]
+lemma sqrt_one {x m : ℕ} :
+  x^2 ≡ 1 [MOD m] → x ≡ 1 [MOD m] ∨ x ≡ m - 1 [MOD m]
   := by
-    sorry
+    intro h
+    have one_sq : 1^2 ≡ 1 [MOD m] := by
+      rw [one_pow]
+    by_cases hx : x ≡ 1 [MOD m]
+    · left
+      exact hx
+    · right
+      by_cases hm : m = 0
+      · exfalso
+        rw [hm] at h hx
+        apply ModEq.mod_zero_iff.mp at h
+        apply ModEq.not_mod_zero_iff.mp at hx
+        have : sqrt (x^2) = sqrt 1 := by rw [h]
+        rw [sqrt_eq', Nat.sqrt_one] at this
+        contradiction
+      · apply one_le_iff_ne_zero.mpr at hm
+        have : _ := by apply two_sqrts x 1 h one_sq
+        apply (or_iff_right hx).mp at this
+        apply ModEq.add_right_cancel' 1
+        rw [← Nat.sub_add_comm hm, Nat.add_one_sub_one]
+        calc
+          x + 1 ≡ 0 [MOD m]     := this
+          _ ≡ m [MOD m]         := ModEq.card.symm
 
 lemma neg_one_sq_cong_one {m : ℕ} (h : m > 0) :
   (m-1)^2 ≡ 1 [MOD m]
@@ -24,13 +60,14 @@ lemma neg_one_sq_cong_one {m : ℕ} (h : m > 0) :
     (m-1)^2
     _ = m^2 + 1 - 2*m       := sub_one_sq h
     _ ≡ 1 [MOD m]           := by
-                              apply ModEq.add_left_pow_erase two_pos
-                              apply ModEq.sub_mul_erase
+                              apply (ModEq.sub_mul_erase).mpr
+                              apply (ModEq.add_left_pow_erase two_pos).mpr
+                              rfl
 
 lemma neg_one_pow_even {n m : ℕ} (hm : m > 0) (hn : Even n) :
   (m-1)^n ≡ 1 [MOD m]
   := by
-    rcases (even_iff_eq_two_mul n).mp hn with ⟨k, hk⟩
+    rcases (even_iff_eq_two_mul).mp hn with ⟨k, hk⟩
     rw [hk, pow_mul]
     nth_rw 2 [← one_pow k]
     apply ModEq.pow _ (neg_one_sq_cong_one hm)
