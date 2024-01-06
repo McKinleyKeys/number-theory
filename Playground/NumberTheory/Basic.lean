@@ -47,6 +47,20 @@ lemma sub_one_sq {n : ℕ} (h : n > 0) :
     ]
     ring_nf
 
+lemma lt_of_dvd_sub {a n : ℕ} (hn : 1 < n) (ha : a ∣ n-1) :
+  a < n
+  := by
+    apply le_of_dvd at ha
+    · apply lt_of_le_pred _ ha
+      simp
+      apply lt_trans zero_lt_one hn
+    · simp
+      apply hn
+lemma mem_range_of_dvd_sub {a n : ℕ} (hn : 1 < n) (ha : a ∣ n-1) :
+  a ∈ range n
+  :=
+    Finset.mem_range.mpr (lt_of_dvd_sub hn ha)
+
 
 /-
  - Parity
@@ -220,6 +234,11 @@ lemma ModEq.eq_of_le_of_le {a b m : ℕ} (h : a ≡ b [MOD m]) (ha : 1 ≤ a ∧
  - Primes
  -/
 
+lemma Nat.Prime.one_le {p : ℕ} (hp : p.Prime) :
+  1 ≤ p
+  :=
+    le_of_lt (Prime.one_lt hp)
+
 lemma Nat.Prime.two_dvd {p : ℕ} (hp : p.Prime) (hp' : p > 2) :
   2 ∣ p-1
   := by
@@ -375,6 +394,96 @@ lemma totient_eq_card_coprimes (n : ℕ) :
     congr
     change (fun x => Coprime n x) = (fun x => Coprime x n)
     simp [coprime_comm]
+
+
+/-
+ - Big Operators
+ -/
+
+-- theorem Finset.exists_lt_of_sum_lt_sum {S : Finset α} {f g : α → ℕ} (h : (∑ x in S, f x) < (∑ x in S, g x)) :
+--   ∃ x ∈ S, f x < g x
+--   := by
+--     sorry
+
+theorem Finset.sum_le_of_all_le {S : Finset α} [DecidableEq α] {f g : α → ℕ} (h : ∀ x ∈ S, f x ≤ g x) :
+  (∑ x in S, f x) ≤ (∑ x in S, g x)
+  := by
+    let p (T : Finset α) := ∑ x in T, f x ≤ ∑ x in T, g x
+    change p S
+    apply Finset.induction_on'
+    · simp
+    · intros n T hn _ hnT hT
+      simp [hnT]
+      apply Nat.add_le_add (h n hn)
+      exact hT
+
+theorem Finset.sum_lt_of_all_le_of_lt {S : Finset α} [DecidableEq α] {f g : α → ℕ} (h₁ : ∀ x ∈ S, f x ≤ g x) (h₂ : ∃ s ∈ S, f s < g s) :
+  (∑ x in S, f x) < (∑ x in S, g x)
+  := by
+    rcases h₂ with ⟨s, hs, hs'⟩
+    let T := erase S s
+    have : ∑ x in T, f x ≤ ∑ x in T, g x := by
+      apply sum_le_of_all_le
+      intro x hx
+      apply Finset.mem_erase.mp at hx
+      rcases hx with ⟨_, right⟩
+      apply h₁ x right
+    have : (∑ x in T, f x) + f s < (∑ x in T, g x) + g s :=
+      add_lt_add_of_le_of_lt this hs'
+    rw [sum_erase_add _ _ hs, sum_erase_add _ _ hs] at this
+    exact this
+
+theorem Finset.all_eq_of_sum_eq_of_all_le {S : Finset α} [DecidableEq α] {f g : α → ℕ} (h₁ : ∑ x in S, f x = ∑ x in S, g x) (h₂ : ∀ x ∈ S, f x ≤ g x) :
+  ∀ x ∈ S, f x = g x
+  := by
+    contrapose h₁
+    apply not_forall.mp at h₁
+    simp at h₁
+    rcases h₁ with ⟨s, ⟨hs, hs'⟩⟩
+    have le : f s ≤ g s := h₂ s hs
+    have lt : f s < g s := lt_of_le_of_ne le hs'
+    apply Nat.ne_of_lt
+    apply Finset.sum_lt_of_all_le_of_lt h₂
+    use s
+
+-- notation:50 ⋃ a:50 " in " b:50 ", " c:50 => biUnion b (fun a => c)
+
+-- open Std.ExtendedBinder
+
+/-- `⋃ x in s, f x` is notation for `Finset.biUnion s f`. It is the sum of `f x`,
+where `x` ranges over the finite set `s`. -/
+-- syntax (name := bigunionin) "⋃ " extBinder " in " term ", " term:67 : term
+-- macro_rules (kind := bigunionin)
+--   | `(⋃ $x:ident in $s, $r) => `(Finset.biUnion $s (fun $x ↦ $r))
+--   | `(⋃ $x:ident : $t in $s, $p) => `(Finset.biUnion $s (fun $x:ident : $t ↦ $p))
+
+-- Whoops, accidentally proved Finset.card_biUnion
+theorem Finset.sum_card_eq_card_union [DecidableEq α] {I : Finset ℕ} {f : ℕ → Finset α} (h : Set.PairwiseDisjoint I f) :
+  ∑ i in I, card (f i) = card (I.biUnion f)
+  := by
+    let p (J : Finset ℕ) := ∑ i in J, card (f i) = card (J.biUnion f)
+    change p I
+    apply Finset.induction_on'
+    · simp
+    · intro n J hnI hJI hnJ hJ
+      simp [hnJ]
+      simp at hJI
+      have h_disjoint : Disjoint (f n) (J.biUnion f) := by
+        let q (K : Finset ℕ) := Disjoint (f n) (K.biUnion f)
+        change q J
+        apply Finset.induction_on'
+        · simp
+        · intro m K hmJ hKJ hmK hK
+          simp
+          constructor
+          · rw [Set.PairwiseDisjoint, Set.Pairwise] at h
+            have hnm : n ≠ m := by
+              symm
+              apply ne_of_mem_of_not_mem hmJ hnJ
+            have hmI : m ∈ I := hJI hmJ
+            apply h hnI hmI hnm
+          · apply hK
+      rw [card_disjoint_union h_disjoint, hJ]
 
 
 /-

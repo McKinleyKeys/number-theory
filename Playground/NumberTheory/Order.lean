@@ -206,48 +206,136 @@ theorem ord_pow {a b m : ℕ} (hb : 0 < b):
 --                                                   apply false_or_iff
 --     _ ↔ Coprime b m                             := by apply Nat.coprime_iff_gcd_eq_one
 
-theorem ord_pow_of_coprime {a b m : ℕ} (hb : Coprime b m) :
-  ord (a^b) m = ord a m
-  := by
-    by_cases ha : Coprime a m
-    · apply (ord_pow_eq_iff_coprime ha).mpr hb
-    · by_cases hb' : b = 0
-      · exfalso
-        rw [hb'] at hb
-        apply (coprime_zero_left m).mp at hb
-        rw [hb] at ha
-        have : Coprime a 1 := coprime_one_right a
-        contradiction
-      · apply pos_iff_ne_zero.mpr at hb'
-        rw [ord, ord]
-        have hab : ¬Coprime (a^b) m := by
-          contrapose ha
-          rw [not_not]
-          rw [not_not] at ha
-          apply (coprime_pow_iff hb').mp ha
-        rw [dite_false' ha, dite_false' hab]
+-- theorem ord_pow_of_coprime {a b m : ℕ} (hb : Coprime b m) :
+--   ord (a^b) m = ord a m
+--   := by
+--     by_cases ha : Coprime a m
+--     · apply (ord_pow_eq_iff_coprime ha).mpr hb
+--     · by_cases hb' : b = 0
+--       · exfalso
+--         rw [hb'] at hb
+--         apply (coprime_zero_left m).mp at hb
+--         rw [hb] at ha
+--         have : Coprime a 1 := coprime_one_right a
+--         contradiction
+--       · apply pos_iff_ne_zero.mpr at hb'
+--         rw [ord, ord]
+--         have hab : ¬Coprime (a^b) m := by
+--           contrapose ha
+--           rw [not_not]
+--           rw [not_not] at ha
+--           apply (coprime_pow_iff hb').mp ha
+--         rw [dite_false' ha, dite_false' hab]
 
--- The number of elements of order t is totient(t)
+-- The number of elements of order t is φ(t)
 theorem ord_count {p t : ℕ} (hp : p.Prime) (ht : t ∣ p-1) :
-  card (filter (fun x => ord x p = t) (range p)) = φ t
+  card (filter (fun x => ord x p = t) (Ico 1 p)) = φ t
   := by
-    let c (m : ℕ) := card (filter (fun x => ord x p = m) (range p))
-    have zero_or_eq (m : ℕ) (hm : m < p) : c m = 0 ∨ c m = φ m := by
-      by_cases hc : c m = 0
+    let divs := (p - 1).divisors
+    -- bucket(d) = the set of incongruent residues that have order d
+    let bucket (d : ℕ) := filter (fun x => ord x p = d) (Ico 1 p)
+    -- buckets = the set of all buckets
+    let buckets := image bucket divs
+    -- c(d) = size of bucket(d) = the number of incongruent residues that have order d
+    let c (d : ℕ) := card (bucket d)
+    have zero_or_eq (d : ℕ) (hd : d ∣ p-1) : c d = 0 ∨ c d = φ d := by
+      by_cases hc : c d = 0
       · left
         exact hc
       · right
         have a : ℕ := by sorry
-        have ha : ord a p = m := by sorry
+        have ha : ord a p = d := by sorry
         
         sorry
-    have le (m : ℕ) : c m ≤ φ m := by sorry
-    sorry
+    have le (d : ℕ) (hd : d ∣ p-1) : c d ≤ φ d := by sorry
+    have sum_c : ∑ d in divs, c d = p - 1 := by
+      -- rw [← Finset.card_range p]
+      -- have h_union : card (divs.biUnion bucket) = p - 1 := by
+      --   
+      --   sorry
+      -- rw [← h_union]
+      rw [← card_Ico 1 p]
+      symm
+      apply Finset.card_eq_sum_card_fiberwise
+      intro x hx
+      apply Nat.mem_divisors.mpr
+      constructor
+      · apply ord_dvd_p_sub_one hp
+        rw [coprime_comm]
+        apply mem_Ico.mp at hx
+        rcases hx with ⟨left, right⟩
+        apply coprime_of_lt_prime (pos_iff_one_le.mpr left) right hp
+      · simp
+        apply Prime.one_lt hp
+      -- unfold_let c
+      -- symm
+      -- apply card_biUnion
+      -- intro x hx y hy hxy
+      -- change Disjoint (bucket x) (bucket y)
+      -- apply Finset.disjoint_filter.mpr
+      -- intro o ho hox
+      -- rw [hox]
+      -- apply hxy
+      
+      /-
+       
+       
+       
+       sum of card of buckets = card of union of buckets
+        - if the buckets are disjoint
+       
+       union of buckets = [1, p)
+       
+       goal: sum of card of buckets = p - 1
+       
+       
+       If each bucket is a subset of S
+       ∀ x in X, bucket x ⊆ S
+       
+       If each s falls into one bucket
+       ∀ s ∈ S, card (filter (fun x => s ∈ bucket x) X) = 1
+       
+       ∑ x in X, card (bucket x) = card S
+       -/
+      -- rw [← sum_image (g := bucket)]
+      -- · change ∑ b in buckets, card b = p - 1
+      --   rw [← mul_one (p-1), ← card_range (p-1)]
+      --   /-
+      --    B = Finset Finset α
+      --    ∀ b ∈ B, b ⊆ S
+      --    ∀ s ∈ S, card (filter (fun b => s ∈ b) B) = 1
+      --    ∑ b ∈ B, card b = card S
+      --    -/
+      --   -- apply Finset.sum_card
+      --   sorry
+      -- · intro x hx y  hy hxy
+      --   unfold_let bucket at hxy
+      --   simp at hxy
+      --   sorry
+    have sum_φ : ∑ d in divs, φ d = p - 1 := by
+      rw [sum_totient]
+    have sum_c_eq_sum_φ : ∑ d in divs, c d = ∑ d in divs, φ d := by
+      rw [sum_c, sum_φ]
+    apply all_eq_of_sum_eq_of_all_le sum_c_eq_sum_φ
+    · intro x hx
+      apply Finset.mem_filter.mp at hx
+      rcases hx with ⟨_, right⟩
+      apply le x right
+    · apply Finset.mem_filter.mpr
+      constructor
+      · rw [mem_Ico]
+        constructor
+        · apply pos_iff_one_le.mp
+          apply pos_of_dvd_of_pos ht
+          simp
+          apply Prime.one_lt hp
+        · rw [← Nat.sub_add_comm (Prime.one_le hp)]
+          apply lt_of_dvd_sub (Prime.one_lt hp) ht
+      · exact ht
 
 theorem primitive_root_count {p : ℕ} (hp : p.Prime) :
   card p.primitive_roots = φ (p - 1)
   := by
-    
     sorry
 
 theorem exists_primitive_root {p : ℕ} (hp : p.Prime) :
