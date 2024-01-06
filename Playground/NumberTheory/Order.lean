@@ -249,11 +249,6 @@ theorem ord_count {p t : ℕ} (hp : p.Prime) (ht : t ∣ p-1) :
         sorry
     have le (d : ℕ) (hd : d ∣ p-1) : c d ≤ φ d := by sorry
     have sum_c : ∑ d in divs, c d = p - 1 := by
-      -- rw [← Finset.card_range p]
-      -- have h_union : card (divs.biUnion bucket) = p - 1 := by
-      --   
-      --   sorry
-      -- rw [← h_union]
       rw [← card_Ico 1 p]
       symm
       apply Finset.card_eq_sum_card_fiberwise
@@ -267,51 +262,6 @@ theorem ord_count {p t : ℕ} (hp : p.Prime) (ht : t ∣ p-1) :
         apply coprime_of_lt_prime (pos_iff_one_le.mpr left) right hp
       · simp
         apply Prime.one_lt hp
-      -- unfold_let c
-      -- symm
-      -- apply card_biUnion
-      -- intro x hx y hy hxy
-      -- change Disjoint (bucket x) (bucket y)
-      -- apply Finset.disjoint_filter.mpr
-      -- intro o ho hox
-      -- rw [hox]
-      -- apply hxy
-      
-      /-
-       
-       
-       
-       sum of card of buckets = card of union of buckets
-        - if the buckets are disjoint
-       
-       union of buckets = [1, p)
-       
-       goal: sum of card of buckets = p - 1
-       
-       
-       If each bucket is a subset of S
-       ∀ x in X, bucket x ⊆ S
-       
-       If each s falls into one bucket
-       ∀ s ∈ S, card (filter (fun x => s ∈ bucket x) X) = 1
-       
-       ∑ x in X, card (bucket x) = card S
-       -/
-      -- rw [← sum_image (g := bucket)]
-      -- · change ∑ b in buckets, card b = p - 1
-      --   rw [← mul_one (p-1), ← card_range (p-1)]
-      --   /-
-      --    B = Finset Finset α
-      --    ∀ b ∈ B, b ⊆ S
-      --    ∀ s ∈ S, card (filter (fun b => s ∈ b) B) = 1
-      --    ∑ b ∈ B, card b = card S
-      --    -/
-      --   -- apply Finset.sum_card
-      --   sorry
-      -- · intro x hx y  hy hxy
-      --   unfold_let bucket at hxy
-      --   simp at hxy
-      --   sorry
     have sum_φ : ∑ d in divs, φ d = p - 1 := by
       rw [sum_totient]
     have sum_c_eq_sum_φ : ∑ d in divs, c d = ∑ d in divs, φ d := by

@@ -446,17 +446,6 @@ theorem Finset.all_eq_of_sum_eq_of_all_le {S : Finset α} [DecidableEq α] {f g 
     apply Finset.sum_lt_of_all_le_of_lt h₂
     use s
 
--- notation:50 ⋃ a:50 " in " b:50 ", " c:50 => biUnion b (fun a => c)
-
--- open Std.ExtendedBinder
-
-/-- `⋃ x in s, f x` is notation for `Finset.biUnion s f`. It is the sum of `f x`,
-where `x` ranges over the finite set `s`. -/
--- syntax (name := bigunionin) "⋃ " extBinder " in " term ", " term:67 : term
--- macro_rules (kind := bigunionin)
---   | `(⋃ $x:ident in $s, $r) => `(Finset.biUnion $s (fun $x ↦ $r))
---   | `(⋃ $x:ident : $t in $s, $p) => `(Finset.biUnion $s (fun $x:ident : $t ↦ $p))
-
 -- Whoops, accidentally proved Finset.card_biUnion
 theorem Finset.sum_card_eq_card_union [DecidableEq α] {I : Finset ℕ} {f : ℕ → Finset α} (h : Set.PairwiseDisjoint I f) :
   ∑ i in I, card (f i) = card (I.biUnion f)
