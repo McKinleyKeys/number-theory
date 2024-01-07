@@ -72,6 +72,11 @@ lemma Nat.exists_pos_eq_add_of_lt {a b : ℕ} (h : a < b) :
     · rw [hk]
       ring
 
+lemma Finset.range_eq_insert_zero_Ico_one {n : ℕ} (h : n > 0) :
+  range n = insert 0 (Ico 1 n)
+  := by
+    rw [range_eq_Ico, one_eq_succ_zero, Ico_insert_succ_left h]
+
 
 /-
  - Parity

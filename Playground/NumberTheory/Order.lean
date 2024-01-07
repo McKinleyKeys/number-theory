@@ -170,6 +170,15 @@ theorem ord_mod {a m : ℕ} :
     apply ord_dvd_of_pow_cong_one at h₂
     exact (eq_ord_of_pow_cong_one_of_dvd_ord h₁ h₂).symm
 
+lemma ord_zero {m : ℕ} (hm : m ≠ 1) :
+  ord 0 m = 0
+  := by
+    rw [ord]
+    by_cases h : Coprime 0 m
+    · have : m = 1 := (coprime_zero_left _).mp h
+      contradiction
+    · rw [dite_false' h]
+
 lemma ord_eq_one_iff {a m : ℕ} :
   ord a m = 1 ↔ a ≡ 1 [MOD m]
   := by
@@ -531,15 +540,39 @@ theorem ord_count {p t : ℕ} (hp : p.Prime) (ht : t ∣ p-1) :
           apply lt_of_dvd_sub (Prime.one_lt hp) ht
       · exact ht
 
+-- The number of elements of order t is φ(t)
+theorem ord_count' {p t : ℕ} (hp : p.Prime) (ht : t ∣ p-1) :
+  card (filter (fun x => ord x p = t) (range p)) = φ t
+  := by
+    have t_pos : t > 0 := by
+      apply pos_of_dvd_of_pos ht
+      simp
+      apply Prime.one_lt hp
+    rw [
+      range_eq_insert_zero_Ico_one (Prime.pos hp),
+      filter_insert,
+      ord_zero (Nat.Prime.ne_one hp),
+      ← ord_count hp ht,
+      if_false' (pos_iff_ne_zero.mp t_pos).symm,
+    ]
+
 theorem primitive_root_count {p : ℕ} (hp : p.Prime) :
   card p.primitive_roots = φ (p - 1)
-  := by
-    sorry
+  :=
+    ord_count' hp (dvd_refl (p-1))
 
 theorem exists_primitive_root {p : ℕ} (hp : p.Prime) :
   ∃ a < p, PrimitiveRoot a p
   := by
-    sorry
+    have : card p.primitive_roots > 0 := by
+      rw [primitive_root_count hp]
+      apply totient_pos
+      simp [Prime.one_lt hp]
+    apply card_pos.mp at this
+    change ∃ a, a ∈ p.primitive_roots at this
+    rcases this with ⟨a, ha⟩
+    rw [primitive_roots, mem_filter, mem_range] at ha
+    use a
 
 theorem cong_primitive_root_pow {a p : ℕ} (hp : p.Prime) (ha : Coprime a p) :
   ∃ r < p, PrimitiveRoot r p ∧ ∃ k > 0, r^k ≡ a [MOD p]
