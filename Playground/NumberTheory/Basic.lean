@@ -382,6 +382,29 @@ lemma coprime_iff_ncong_zero {a p : ℕ} (hp : p.Prime) :
     rw [NotModEq, Classical.not_not]
     apply not_coprime_iff_cong_zero hp
 
+lemma coprime_of_mod_eq_one {a m : ℕ} (hm : m ≠ 1) (ha : a % m = 1) :
+  Coprime a m
+  := by
+    apply coprime_of_mul_modEq_one 1
+    rw [mul_one, ModEq, one_mod_of_ne_one hm]
+    exact ha
+
+lemma coprime_of_cong_one {a m : ℕ} (ha : a ≡ 1 [MOD m]) :
+  Coprime a m
+  := by
+    by_cases hm : m = 1
+    · rw [hm]
+      apply coprime_one_right
+    · rw [ModEq, one_mod_of_ne_one hm] at ha
+      apply coprime_of_mod_eq_one hm ha
+
+lemma coprime_of_mem_Ico {a p : ℕ} (hp : p.Prime) (ha : a ∈ Ico 1 p) :
+  Coprime a p
+  := by
+    rw [mem_Ico] at ha
+    apply Coprime.symm
+    apply coprime_of_lt_prime (pos_iff_one_le.mpr ha.left) ha.right hp
+
 def Nat.coprimes (n : ℕ) : Finset ℕ
   := filter (fun x => Coprime x n) (range n)
 
@@ -397,6 +420,15 @@ lemma mem_coprimes₂ {a n : ℕ} (ha : a ∈ n.coprimes) :
     apply (mem_filter (s := (range n))).mp at ha
     rcases ha with ⟨left, _⟩
     apply Finset.mem_range.mp left
+lemma mem_coprimes₃ {a n : ℕ} (hn : n ≠ 1) (ha : a ∈ n.coprimes) :
+  0 < a
+  := by
+    apply (mem_filter (s := (range n))).mp at ha
+    rcases ha with ⟨_, right⟩
+    contrapose hn with ha
+    simp at ha
+    rw [ha, coprime_zero_left] at right
+    simp [right]
 
 lemma totient_eq_card_coprimes (n : ℕ) :
   φ n = card n.coprimes
@@ -405,6 +437,35 @@ lemma totient_eq_card_coprimes (n : ℕ) :
     congr
     change (fun x => Coprime n x) = (fun x => Coprime x n)
     simp [coprime_comm]
+
+lemma not_dvd_of_coprime {a m : ℕ} (hm : m ≠ 1) (ha : Coprime a m) :
+  m ∤ a
+  := by
+    contrapose ha
+    rw [NotDvd, Classical.not_not, Nat.gcd_eq_right_iff_dvd] at ha
+    rw [Coprime, ha]
+    exact hm
+
+lemma mod_pos_iff_not_dvd {a m : ℕ} :
+  0 < a % m ↔ m ∤ a
+  := by
+    rw [
+      pos_iff_ne_zero,
+      ← not_iff_not,
+      NotDvd,
+      Classical.not_not,
+      Classical.not_not,
+    ]
+    symm
+    apply Nat.dvd_iff_mod_eq_zero
+lemma mod_pos_of_coprime {a m : ℕ} (hm : m ≠ 1) (ha : Coprime a m) :
+  0 < a % m
+  := by
+    apply not_dvd_of_coprime hm at ha
+    contrapose ha
+    apply Nat.eq_zero_of_not_pos at ha
+    rw [NotDvd, Classical.not_not]
+    apply (Nat.dvd_iff_mod_eq_zero _ _).mpr ha
 
 
 /-
