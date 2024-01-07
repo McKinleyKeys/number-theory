@@ -2,6 +2,7 @@
 import Mathlib
 import Playground.Logic
 import Playground.NumberTheory.Basic
+import Playground.NumberTheory.Polynomials
 
 open Nat Finset BigOperators
 
@@ -38,6 +39,16 @@ lemma ord_pos {a m : ℕ} (hm : Coprime a m) :
       apply Nat.find_spec (exists_ord hm)
     rcases this with ⟨left, _⟩
     exact left
+
+lemma ord_pos_iff_coprime {a m : ℕ} :
+  ord a m > 0 ↔ Coprime a m
+  := by
+    constructor
+    · intro h
+      contrapose h
+      rw [ord, dite_false' h]
+      simp
+    · exact ord_pos
 
 lemma pow_ord {a m : ℕ} :
   a^(ord a m) ≡ 1 [MOD m]
@@ -140,6 +151,51 @@ theorem ord_dvd_p_sub_one {a p : ℕ} (hp : p.Prime) (ha : Coprime a p) :
     · exfalso
       contradiction
 
+theorem eq_ord_of_pow_cong_one_of_dvd_ord {a m o : ℕ} (h₁ : a^o ≡ 1 [MOD m]) (h₂ : o ∣ ord a m) :
+  o = ord a m
+  := by
+    apply ord_dvd_of_pow_cong_one at h₁
+    apply dvd_antisymm h₂ h₁
+
+theorem ord_mod {a m : ℕ} :
+  ord (a % m) m = ord a m
+  := by
+    let o := ord a m
+    let o' := ord (a % m) m
+    change o' = o
+    have h₁ : (a % m)^o ≡ 1 [MOD m] := by
+      rw [ModEq, ← pow_mod, pow_ord]
+    have h₂ : a^o' ≡ 1 [MOD m] := by
+      rw [ModEq, pow_mod, pow_ord]
+    apply ord_dvd_of_pow_cong_one at h₂
+    exact (eq_ord_of_pow_cong_one_of_dvd_ord h₁ h₂).symm
+
+lemma ord_eq_one_iff {a m : ℕ} :
+  ord a m = 1 ↔ a ≡ 1 [MOD m]
+  := by
+    constructor
+    · intro h
+      rw [← pow_one a]
+      nth_rw 1 [← h]
+      apply pow_ord
+    · intro h
+      have ha : Coprime a m := coprime_of_cong_one h
+      have le : ord a m ≤ 1 := by
+        rw [ord, dite_true' ha]
+        apply Nat.find_min' (exists_ord ha)
+        constructor
+        · norm_num
+        · rw [pow_one]
+          exact h
+      have pos : 0 < ord a m := ord_pos ha
+      apply eq_of_le_of_not_lt le
+      simp [pos_iff_ne_zero.mp pos]
+lemma ord_one {m : ℕ} :
+  ord 1 m = 1
+  := by
+    apply ord_eq_one_iff.mpr
+    apply ModEq.refl
+
 theorem pow_mod_ord {a k m : ℕ} :
   a^(k % (ord a m)) ≡ a^k [MOD m]
   := by
@@ -210,26 +266,26 @@ theorem pow_cong_pow_iff_cong {a k j m : ℕ} (ha : Coprime a m) :
 theorem ord_pow {a b m : ℕ} (hb : 0 < b):
   ord (a^b) m = (ord a m) / (Nat.gcd b (ord a m))
   := by
-    let t := ord a m
-    let g := Nat.gcd b t
-    let t' := t / g
+    let o := ord a m
+    let g := Nat.gcd b o
+    let o' := o / g
     let b' := b / g
     let x := ord (a^b) m
-    show x = t'
+    show x = o'
     have g_pos : 0 < g := Nat.gcd_pos_of_pos_left _ hb
     have g_dvd_b : g ∣ b := by apply Nat.gcd_dvd_left
-    have g_dvd_t : g ∣ t := by apply Nat.gcd_dvd_right
-    have t'_b' : Coprime t' b' := by
-      unfold_let t' b' g
+    have g_dvd_t : g ∣ o := by apply Nat.gcd_dvd_right
+    have t'_b' : Coprime o' b' := by
+      unfold_let o' b' g
       apply coprime_comm.mp
       apply coprime_div_gcd_div_gcd
       apply g_pos
-    have h₁ : (a^b)^t' ≡ 1 [MOD m] := calc
-      (a^b)^t'
-      _ = (a^(b' * g))^(t / g)      := by
-                                      unfold_let b' t'
+    have h₁ : (a^b)^o' ≡ 1 [MOD m] := calc
+      (a^b)^o'
+      _ = (a^(b' * g))^(o / g)      := by
+                                      unfold_let b' o'
                                       rw [Nat.div_mul_cancel g_dvd_b]
-      _ = (a^t)^b'                  := by
+      _ = (a^o)^b'                  := by
                                       rw [
                                         ← pow_mul,
                                         mul_assoc,
@@ -241,21 +297,20 @@ theorem ord_pow {a b m : ℕ} (hb : 0 < b):
                                       apply ModEq.pow
                                       apply pow_ord
       _ = 1                         := one_pow _
-    have h₂ : t' ∣ x := by
+    have h₂ : o' ∣ x := by
       have : a^(b*x) ≡ 1 [MOD m] := calc
         a^(b*x)
         _ = (a^b)^x                 := by apply pow_mul
         _ ≡ 1 [MOD m]               := pow_ord
       apply ord_dvd_of_pow_cong_one at this
-      have : t'*g ∣ b'*g*x := by
-        unfold_let t' b'
+      have : o'*g ∣ b'*g*x := by
+        unfold_let o' b'
         rw [Nat.div_mul_cancel g_dvd_t, Nat.div_mul_cancel g_dvd_b]
         exact this
       rw [mul_comm, mul_comm b', mul_assoc] at this
       apply Nat.dvd_of_mul_dvd_mul_left g_pos at this
       apply (Coprime.dvd_mul_left t'_b').mp this
-    apply ord_dvd_of_pow_cong_one at h₁
-    apply dvd_antisymm h₁ h₂
+    exact (eq_ord_of_pow_cong_one_of_dvd_ord h₁ h₂).symm
 
 -- theorem ord_pow_eq_iff_coprime {a b m : ℕ} (ha : Coprime a m) :
 --   ord (a^b) m = ord a m ↔ Coprime b m
@@ -290,6 +345,25 @@ theorem ord_pow {a b m : ℕ} (hb : 0 < b):
 --           apply (coprime_pow_iff hb').mp ha
 --         rw [dite_false' ha, dite_false' hab]
 
+theorem coprime_ord_of_pow_cong_of_ord_eq_ord {a b k n : ℕ} (h_ord : ord a n = ord b n) (h_ord' : ord a n > 0) (h : a^k ≡ b [MOD n]) :
+  Coprime k (ord a n)
+  := by
+    by_cases hk : k = 0
+    · rw [hk, Nat.pow_zero, ModEq.comm] at h
+      rw [← ord_eq_one_iff] at h
+      rw [h] at h_ord
+      rw [hk]
+      apply (coprime_zero_left _).mpr h_ord
+    · apply pos_iff_ne_zero.mpr at hk
+      rw [← ord_mod (a := b)] at h_ord
+      rw [ModEq] at h
+      rw [← h, ord_mod, ord_pow hk] at h_ord
+      symm at h_ord
+      apply Nat.div_eq_self.mp at h_ord
+      apply pos_iff_ne_zero.mp at h_ord'
+      rw [Coprime]
+      apply (or_iff_right h_ord').mp h_ord
+
 -- The number of elements of order t is φ(t)
 theorem ord_count {p t : ℕ} (hp : p.Prime) (ht : t ∣ p-1) :
   card (filter (fun x => ord x p = t) (Ico 1 p)) = φ t
@@ -297,8 +371,6 @@ theorem ord_count {p t : ℕ} (hp : p.Prime) (ht : t ∣ p-1) :
     let divs := (p - 1).divisors
     -- bucket(d) = the set of incongruent residues that have order d
     let bucket (d : ℕ) := filter (fun x => ord x p = d) (Ico 1 p)
-    -- buckets = the set of all buckets
-    let buckets := image bucket divs
     -- c(d) = size of bucket(d) = the number of incongruent residues that have order d
     let c (d : ℕ) := card (bucket d)
     have zero_or_eq (d : ℕ) (hd : d ∣ p-1) : c d = 0 ∨ c d = φ d := by
@@ -312,28 +384,113 @@ theorem ord_count {p t : ℕ} (hp : p.Prime) (ht : t ∣ p-1) :
         rcases hc with ⟨a, ha⟩
         rw [mem_filter] at ha
         rcases ha with ⟨ha, ha'⟩
-        /-
-         ord (a^b) p = (ord a o) / (Nat.gcd b (ord a p))
-         
-         ord a p = d
-         for each k coprime with d:
-         ord (a^k) p = d
-         
-         Goal: a^k are all incongruent
-         For every k, j coprime with d:
-         a^k ≢ a^j [MOD p]
-         
-         If ord b p = d:
-           b^d ≡ 1
-           
-         
-         -/
-        let pows := image (fun k => a^k % p) d.coprimes
-        have subset : pows ⊆ bucket d := by
-          sorry
-        have card_pows : card pows = φ d := by
-          sorry
-        sorry
+        apply coprime_of_mem_Ico hp at ha
+        have d_pos : d > 0 := by
+          rw [← ha']
+          apply ord_pos ha
+        let pows := image (fun k => a^k % p) (range d)
+        let pows' := image (fun k => a^k % p) d.coprimes
+        have inj : Set.InjOn (fun k => a^k % p) (range d) := by
+          intro x hx y hy h
+          change a^x ≡ a^y [MOD p] at h
+          apply eq_of_pow_cong_pow_of_lt_of_lt ha h
+          all_goals rw [ha']
+          · apply mem_range.mp hx
+          · apply mem_range.mp hy
+        have card_pows : card pows = d := by
+          rw [← card_range d]
+          apply card_image_iff.mpr inj
+        have card_pows' : card pows' = φ d := by
+          rw [totient_eq_card_coprimes]
+          apply card_image_iff.mpr
+          apply Set.InjOn.mono _ inj
+          intro x hx
+          apply mem_coprimes₂ at hx
+          apply mem_range.mpr hx
+        have : filter (fun x => x^d ≡ 1 [MOD p]) (range p) = pows := by
+          symm
+          apply eq_of_subset_of_card_le
+          · intro x hx
+            apply mem_image.mp at hx
+            rcases hx with ⟨k, _, hk⟩
+            apply mem_filter.mpr
+            rw [← hk]
+            constructor
+            · simp [mod_lt _ (Prime.pos hp)]
+            · rw [
+                ModEq,
+                ← pow_mod,
+                ← pow_mul',
+                pow_mul,
+                pow_mod,
+                ← ha',
+                pow_ord,
+                one_mod_of_ne_one (Nat.Prime.ne_one hp),
+                one_pow,
+                one_mod_of_ne_one (Nat.Prime.ne_one hp),
+              ]
+          · rw [card_pows, pow_cong_one_solutions hp hd]
+        have subset : pows' ⊆ bucket d := by
+          intro t ht
+          apply mem_image.mp at ht
+          rcases ht with ⟨k, hk, hk'⟩
+          rw [← hk']
+          apply mem_filter.mpr
+          constructor
+          · apply mem_Ico.mpr
+            constructor
+            · apply pos_iff_one_le.mp
+              apply mod_pos_of_coprime (Nat.Prime.ne_one hp)
+              apply coprime_pow
+              apply ha
+            · apply mod_lt _ (Prime.pos hp)
+          · by_cases k_zero : k = 0
+            · have d_one : d = 1 := by
+                apply mem_coprimes₁ at hk
+                rw [k_zero, coprime_zero_left] at hk
+                exact hk
+              rw [
+                k_zero,
+                Nat.pow_zero,
+                one_mod_of_ne_one (Nat.Prime.ne_one hp),
+                ord_one,
+                d_one,
+              ]
+            · apply pos_iff_ne_zero.mpr at k_zero
+              apply mem_coprimes₁ at hk
+              rw [Coprime] at hk
+              rw [ord_mod, ord_pow k_zero, ha', hk, Nat.div_one]
+        have supset : pows' ⊇ bucket d := by
+          intro b hb
+          apply mem_filter.mp at hb
+          rcases hb with ⟨hb, hb'⟩
+          have : b ∈ pows := by
+            rw [← this, mem_filter]
+            constructor
+            · rw [mem_range]
+              rw [mem_Ico] at hb
+              exact hb.right
+            · rw [← hb']
+              exact pow_ord
+          apply mem_image.mp at this
+          rcases this with ⟨k, ⟨hk₁, hk₂⟩⟩
+          have hk' : Coprime k d := by
+            rw [← ha']
+            apply coprime_ord_of_pow_cong_of_ord_eq_ord (b := b)
+            · rw [ha', hb']
+            · rw [ha']
+              apply d_pos
+            · rw [ModEq, hk₂]
+              symm
+              apply Nat.mod_eq_of_lt (mem_Ico.mp hb).right
+          have : k ∈ d.coprimes := by
+            apply mem_filter.mpr
+            constructor <;> assumption
+          apply mem_image.mpr
+          use k
+        have eq : pows' = bucket d := subset_antisymm subset supset
+        change card (bucket d) = φ d
+        rw [← eq, card_pows']
     have le (d : ℕ) (hd : d ∣ p-1) : c d ≤ φ d := by
       rcases zero_or_eq d hd with zero | eq
       · rw [zero]
