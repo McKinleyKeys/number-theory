@@ -50,10 +50,9 @@ lemma pow_ord {a m : ℕ} :
       exact right
     · rw [ord, dite_false' hm, Nat.pow_zero]
 
-lemma ord_min {a n m : ℕ} (hn : 0 < n ∧ n < ord a m) :
+lemma ord_min {a n m : ℕ} (hn₁ : 0 < n) (hn₂ : n < ord a m) :
   a^n ≢ 1 [MOD m]
   := by
-    rcases hn with ⟨hn₁, hn₂⟩
     rw [ord] at hn₂
     by_cases ha : Coprime a m
     · rw [dite_true' ha] at hn₂
@@ -78,12 +77,12 @@ def PrimitiveRoot (a m : ℕ) :=
 def Nat.primitive_roots (m : ℕ) : Finset ℕ
   := filter (fun x => PrimitiveRoot x m) (range m)
 
-lemma primitive_root_min {r n m : ℕ} (hr : PrimitiveRoot r m) (hn : 0 < n ∧ n < m-1) :
+lemma primitive_root_min {r n m : ℕ} (hr : PrimitiveRoot r m) (hn₁ : 0 < n) (hn₂ : n < m-1) :
   r^n ≢ 1 [MOD m]
   := by
     rw [PrimitiveRoot] at hr
-    rw [← hr] at hn
-    apply ord_min hn
+    rw [← hr] at hn₂
+    apply ord_min hn₁ hn₂
 
 theorem coprime_of_primitive_root {r m : ℕ} (hm : 1 < m) (hr : PrimitiveRoot r m) :
   Coprime r m
@@ -140,6 +139,70 @@ theorem ord_dvd_p_sub_one {a p : ℕ} (hp : p.Prime) (ha : Coprime a p) :
       apply (dvd_iff_mod_eq_zero (ord a p) (p - 1)).mpr left
     · exfalso
       contradiction
+
+theorem pow_mod_ord {a k m : ℕ} :
+  a^(k % (ord a m)) ≡ a^k [MOD m]
+  := by
+    let o := ord a m
+    symm
+    calc
+      a^k
+      _ = a^(o * (k/o) + k%o)           := by rw [div_add_mod k o]
+      _ = (a^o)^(k/o) * a^(k%o)         := by rw [pow_add, pow_mul]
+      _ ≡ 1^(k/o) * a^(k%o) [MOD m]     := by
+                                          apply ModEq.mul_right
+                                          apply ModEq.pow
+                                          exact pow_ord
+      _ = a^(k % o)                     := by rw [one_pow, one_mul]
+
+theorem eq_of_pow_cong_pow_of_lt_of_lt {a k j m : ℕ} (ha : Coprime a m) (h : a^k ≡ a^j [MOD m]) (hk : k < ord a m) (hj : j < ord a m) :
+  k = j
+  := by
+    apply Classical.by_contradiction
+    intro hkj
+    change k ≠ j at hkj
+    wlog lt : k < j
+    · specialize this (a := a) (k := j) (j := k) (m := m) ha h.symm hj hk hkj.symm
+      rw [not_lt] at lt
+      have lt' : j < k := lt_of_le_of_ne lt hkj.symm
+      apply this lt'
+    · apply exists_pos_eq_add_of_lt at lt
+      rcases lt with ⟨d, ⟨hd, hjkd⟩⟩
+      rw [hjkd, pow_add] at h
+      nth_rw 1 [← mul_one (a^k)] at h
+      have hak : Coprime (a^k) m := coprime_pow ha
+      apply ModEq.cancel_left_of_coprime hak.symm at h
+      have hdj : d ≤ j := by
+        simp [hjkd]
+      have hd' : d < ord a m := lt_of_le_of_lt hdj hj
+      have : a^d ≢ 1 [MOD m] := ord_min hd hd'
+      symm at h
+      contradiction
+
+theorem pow_cong_pow_iff_cong {a k j m : ℕ} (ha : Coprime a m) :
+  a^k ≡ a^j [MOD m] ↔ k ≡ j [MOD ord a m]
+  := by
+    let o := ord a m
+    constructor
+    · intro h
+      rw [ModEq]
+      have hk : k % o < o := mod_lt _ (ord_pos ha)
+      have hj : j % o < o := mod_lt _ (ord_pos ha)
+      have : a^(k%o) ≡ a^(j%o) [MOD m] := calc
+        a^(k%o)
+        _ ≡ a^k [MOD m]       := pow_mod_ord
+        _ ≡ a^j [MOD m]       := h
+        _ ≡ a^(j%o) [MOD m]   := pow_mod_ord.symm
+      apply eq_of_pow_cong_pow_of_lt_of_lt ha this hk hj
+    · intro h
+      rw [ModEq] at h
+      calc
+        a^k
+        _ ≡ a^(k % o) [MOD m]       := by
+                                      symm
+                                      apply pow_mod_ord
+        _ = a^(j % o)               := by rw [h]
+        _ ≡ a^j       [MOD m]       := pow_mod_ord
 
 /-
  - Page 92 of https://resources.saylor.org/wwwresources/archived/site/wp-content/uploads/2013/05/An-Introductory-in-Elementary-Number-Theory.pdf
@@ -243,11 +306,39 @@ theorem ord_count {p t : ℕ} (hp : p.Prime) (ht : t ∣ p-1) :
       · left
         exact hc
       · right
-        have a : ℕ := by sorry
-        have ha : ord a p = d := by sorry
-        
+        apply pos_iff_ne_zero.mpr at hc
+        apply card_pos.mp at hc
+        rw [Finset.Nonempty] at hc
+        rcases hc with ⟨a, ha⟩
+        rw [mem_filter] at ha
+        rcases ha with ⟨ha, ha'⟩
+        /-
+         ord (a^b) p = (ord a o) / (Nat.gcd b (ord a p))
+         
+         ord a p = d
+         for each k coprime with d:
+         ord (a^k) p = d
+         
+         Goal: a^k are all incongruent
+         For every k, j coprime with d:
+         a^k ≢ a^j [MOD p]
+         
+         If ord b p = d:
+           b^d ≡ 1
+           
+         
+         -/
+        let pows := image (fun k => a^k % p) d.coprimes
+        have subset : pows ⊆ bucket d := by
+          sorry
+        have card_pows : card pows = φ d := by
+          sorry
         sorry
-    have le (d : ℕ) (hd : d ∣ p-1) : c d ≤ φ d := by sorry
+    have le (d : ℕ) (hd : d ∣ p-1) : c d ≤ φ d := by
+      rcases zero_or_eq d hd with zero | eq
+      · rw [zero]
+        apply Nat.zero_le
+      · rw [eq]
     have sum_c : ∑ d in divs, c d = p - 1 := by
       rw [← card_Ico 1 p]
       symm

@@ -61,6 +61,17 @@ lemma mem_range_of_dvd_sub {a n : ℕ} (hn : 1 < n) (ha : a ∣ n-1) :
   :=
     Finset.mem_range.mpr (lt_of_dvd_sub hn ha)
 
+lemma Nat.exists_pos_eq_add_of_lt {a b : ℕ} (h : a < b) :
+  ∃ k > 0, b = a + k
+  := by
+    apply exists_eq_add_of_lt at h
+    rcases h with ⟨k, hk⟩
+    use k + 1
+    constructor
+    · simp
+    · rw [hk]
+      ring
+
 
 /-
  - Parity
@@ -446,7 +457,7 @@ theorem Finset.all_eq_of_sum_eq_of_all_le {S : Finset α} [DecidableEq α] {f g 
     apply Finset.sum_lt_of_all_le_of_lt h₂
     use s
 
--- Whoops, accidentally proved Finset.card_biUnion
+-- Whoops, accidentally proved Finset.card_eq_sum_card_fiberwise
 theorem Finset.sum_card_eq_card_union [DecidableEq α] {I : Finset ℕ} {f : ℕ → Finset α} (h : Set.PairwiseDisjoint I f) :
   ∑ i in I, card (f i) = card (I.biUnion f)
   := by
