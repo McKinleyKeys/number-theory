@@ -3,6 +3,7 @@ import Mathlib
 import Playground.Logic
 import Playground.NumberTheory.Basic
 import Playground.NumberTheory.Order
+import Playground.NumberTheory.PrimitiveRoots
 
 open Nat
 
@@ -199,15 +200,14 @@ theorem legendre_cong {a p : ℕ} (hp : p.Prime) (hp' : p > 2) :
         have : (r^((p-1)/2))^2 ≡ 1 [MOD p] := by
           ring_nf
           rw [Nat.div_mul_cancel (Prime.two_dvd hp hp')]
-          apply fermat's_little_theorem hp (coprime_of_primitive_root hp hr)
+          apply fermat's_little_theorem hp (Prime.coprime_of_primitive_root hp hr)
         have r_pow : r^((p-1)/2) ≡ p-1 [MOD p] := by
-          apply sqrt_one hp at this
+          apply _root_.sqrt_one at this
           rcases this with one | neg_one
           · exfalso
             have ne_one : r^((p-1)/2) ≢ 1 [MOD p] := by
-              apply primitive_root_min hp hr
-              constructor
-              · exact p_sub_one_div_two_pos
+              apply primitive_root_min hr
+              · linarith
               · apply Nat.div_lt_self _ one_lt_two
                 simp
                 linarith [hp']
