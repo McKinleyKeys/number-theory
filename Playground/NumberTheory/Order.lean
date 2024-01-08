@@ -76,12 +76,63 @@ lemma ord_min {a n m : ℕ} (hn₁ : 0 < n) (hn₂ : n < ord a m) :
       rw [dite_false' ha] at hn₂
       contradiction
 
-
-
-theorem ord_dvd_of_pow_cong_one {a b m : ℕ} (h : a^b ≡ 1 [MOD m]) :
-  ord a m ∣ b
+lemma ord_eq_zero_iff {a m : ℕ} :
+  ord a m = 0 ↔ ¬Coprime a m
   := by
-    sorry
+    apply Iff.not_right
+    constructor
+    · intro h
+      rw [ord] at h
+      apply dite_ne_right_iff.mp at h
+      exact h.1
+    · intro h
+      rw [← Ne, ← pos_iff_ne_zero]
+      apply ord_pos h
+
+
+
+theorem pow_mod_ord {a k m : ℕ} :
+  a^(k % (ord a m)) ≡ a^k [MOD m]
+  := by
+    let o := ord a m
+    symm
+    calc
+      a^k
+      _ = a^(o * (k/o) + k%o)           := by rw [div_add_mod k o]
+      _ = (a^o)^(k/o) * a^(k%o)         := by rw [pow_add, pow_mul]
+      _ ≡ 1^(k/o) * a^(k%o) [MOD m]     := by
+                                          apply ModEq.mul_right
+                                          apply ModEq.pow
+                                          exact pow_ord
+      _ = a^(k % o)                     := by rw [one_pow, one_mul]
+
+theorem ord_dvd_iff_pow_cong_one {a b m : ℕ} :
+  ord a m ∣ b ↔ a^b ≡ 1 [MOD m]
+  := by
+    let o := ord a m
+    constructor
+    · intro h
+      apply exists_eq_mul_right_of_dvd at h
+      rcases h with ⟨c, hc⟩
+      rw [hc, pow_mul, ← one_pow c]
+      apply ModEq.pow c pow_ord
+    · intro h
+      by_cases ho : o = 0
+      · unfold_let o at ho
+        rw [ho]
+        simp
+        apply ord_eq_zero_iff.mp at ho
+        apply eq_zero_of_pow_cong_one_of_not_coprime ho h
+      · apply Classical.by_contradiction
+        intro hb
+        have hbo : b % o > 0 := mod_pos_iff_not_dvd.mpr hb
+        have : a^(b % o) ≡ 1 [MOD m] := calc
+          _ ≡ a^b [MOD m]       := pow_mod_ord
+          _ ≡ 1 [MOD m]         := h
+        have : a^(b % o) ≢ 1 [MOD m] := by
+          apply ord_min hbo
+          apply mod_lt _ (pos_iff_ne_zero.mpr ho)
+        contradiction
 
 theorem ord_dvd_p_sub_one {a p : ℕ} (hp : p.Prime) (ha : Coprime a p) :
   (ord a p) ∣ p-1
@@ -124,7 +175,7 @@ theorem ord_dvd_p_sub_one {a p : ℕ} (hp : p.Prime) (ha : Coprime a p) :
 theorem eq_ord_of_pow_cong_one_of_dvd_ord {a m o : ℕ} (h₁ : a^o ≡ 1 [MOD m]) (h₂ : o ∣ ord a m) :
   o = ord a m
   := by
-    apply ord_dvd_of_pow_cong_one at h₁
+    apply ord_dvd_iff_pow_cong_one.mpr at h₁
     apply dvd_antisymm h₂ h₁
 
 theorem ord_mod {a m : ℕ} :
@@ -137,7 +188,7 @@ theorem ord_mod {a m : ℕ} :
       rw [ModEq, ← pow_mod, pow_ord]
     have h₂ : a^o' ≡ 1 [MOD m] := by
       rw [ModEq, pow_mod, pow_ord]
-    apply ord_dvd_of_pow_cong_one at h₂
+    apply ord_dvd_iff_pow_cong_one.mpr at h₂
     exact (eq_ord_of_pow_cong_one_of_dvd_ord h₁ h₂).symm
 
 lemma ord_zero {m : ℕ} (hm : m ≠ 1) :
@@ -174,21 +225,6 @@ lemma ord_one {m : ℕ} :
   := by
     apply ord_eq_one_iff.mpr
     apply ModEq.refl
-
-theorem pow_mod_ord {a k m : ℕ} :
-  a^(k % (ord a m)) ≡ a^k [MOD m]
-  := by
-    let o := ord a m
-    symm
-    calc
-      a^k
-      _ = a^(o * (k/o) + k%o)           := by rw [div_add_mod k o]
-      _ = (a^o)^(k/o) * a^(k%o)         := by rw [pow_add, pow_mul]
-      _ ≡ 1^(k/o) * a^(k%o) [MOD m]     := by
-                                          apply ModEq.mul_right
-                                          apply ModEq.pow
-                                          exact pow_ord
-      _ = a^(k % o)                     := by rw [one_pow, one_mul]
 
 theorem eq_of_pow_cong_pow {a k j m : ℕ} (ha : Coprime a m) (hk : k < ord a m) (hj : j < ord a m) (h : a^k ≡ a^j [MOD m]) :
   k = j
@@ -317,7 +353,7 @@ theorem ord_pow {a b m : ℕ} (hb : 0 < b):
         a^(b*x)
         _ = (a^b)^x                 := by apply pow_mul
         _ ≡ 1 [MOD m]               := pow_ord
-      apply ord_dvd_of_pow_cong_one at this
+      apply ord_dvd_iff_pow_cong_one.mpr at this
       have : o'*g ∣ b'*g*x := by
         unfold_let o' b'
         rw [Nat.div_mul_cancel g_dvd_t, Nat.div_mul_cancel g_dvd_b]

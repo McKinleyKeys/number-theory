@@ -6,6 +6,21 @@ open Nat Finset BigOperators
 
 
 /-
+ - Custom Operators
+ -/
+
+@[simp]
+def NotModEq (n a b : ℕ) :=
+  ¬(a ≡ b [MOD n])
+notation:50 a:50 " ≢ " b:50 " [MOD " n:50 "]" => NotModEq n a b
+
+@[simp]
+def NotDvd (a b : ℕ) :=
+  ¬(a ∣ b)
+notation:50 a:50 " ∤ " b:50 => NotDvd a b
+
+
+/-
  - Miscellaneous
  -/
 
@@ -169,21 +184,6 @@ lemma even_sub_one_of_odd {n : ℕ} (hn : Odd n) :
     rw [h]
     simp
     exact hk
-
-
-/-
- - Custom Operators
- -/
-
-@[simp]
-def NotModEq (n a b : ℕ) :=
-  ¬(a ≡ b [MOD n])
-notation:50 a:50 " ≢ " b:50 " [MOD " n:50 "]" => NotModEq n a b
-
-@[simp]
-def NotDvd (a b : ℕ) :=
-  ¬(a ∣ b)
-notation:50 a:50 " ∤ " b:50 => NotDvd a b
 
 
 /-
@@ -404,6 +404,12 @@ lemma coprime_mod_eq {a b m : ℕ} (h : a ≡ b [MOD m]) (ha : Coprime a m) :
     rw [h] at ha
     apply coprime_mod_iff.mpr at ha
     exact ha
+lemma coprime_mod_eq_iff {a b m : ℕ} (h : a ≡ b [MOD m]) :
+  Coprime a m ↔ Coprime b m
+  := by
+    constructor
+    · apply coprime_mod_eq h
+    · apply coprime_mod_eq h.symm
 lemma coprime_pow_iff {a b n : ℕ} (hb : b > 0) :
   Coprime (a^b) n ↔ Coprime a n
   := by
@@ -445,8 +451,7 @@ lemma not_coprime_iff_cong_zero {a p : ℕ} (hp : p.Prime) :
 lemma coprime_iff_ncong_zero {a p : ℕ} (hp : p.Prime) :
   Coprime a p ↔ a ≢ 0 [MOD p]
   := by
-    apply not_iff_not.mp
-    rw [NotModEq, Classical.not_not]
+    apply Iff.not_right
     apply not_coprime_iff_cong_zero hp
 
 lemma coprime_of_mod_eq_one {a m : ℕ} (hm : m ≠ 1) (ha : a % m = 1) :
@@ -528,13 +533,8 @@ lemma not_dvd_of_coprime {a m : ℕ} (hm : m ≠ 1) (ha : Coprime a m) :
 lemma mod_pos_iff_not_dvd {a m : ℕ} :
   0 < a % m ↔ m ∤ a
   := by
-    rw [
-      pos_iff_ne_zero,
-      ← not_iff_not,
-      NotDvd,
-      Classical.not_not,
-      Classical.not_not,
-    ]
+    apply Iff.not_right
+    rw [pos_iff_ne_zero, Classical.not_not]
     symm
     apply Nat.dvd_iff_mod_eq_zero
 lemma mod_pos_of_coprime {a m : ℕ} (hm : m ≠ 1) (ha : Coprime a m) :
@@ -690,3 +690,14 @@ theorem fermat's_little_theorem {a p : ℕ} (hp : p.Prime) (ha : Coprime a p) :
   := by
     rw [← totient_prime hp]
     apply euler's_totient_theorem (Prime.pos hp) ha
+
+theorem eq_zero_of_pow_cong_one_of_not_coprime {a b m : ℕ} (ha : ¬Coprime a m) (h : a^b ≡ 1 [MOD m]) :
+  b = 0
+  := by
+    apply Classical.by_contradiction
+    intro hb
+    apply pos_iff_ne_zero.mpr at hb
+    apply (coprime_pow_iff hb).not.mpr at ha
+    have : ¬Coprime 1 m := (coprime_mod_eq_iff h).not.mp ha
+    have : Coprime 1 m := coprime_one_left m
+    contradiction
