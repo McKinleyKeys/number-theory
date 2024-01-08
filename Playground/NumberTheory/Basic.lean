@@ -290,9 +290,6 @@ lemma Ico_incong_set {a m : ℕ} :
     rw [ModEq, mod_eq_of_lt hc, mod_eq_of_lt hd] at hxy
     rw [hxc, hyd, hxy]
 
-lemma Ico_one_incong_set {m : ℕ} :
-  IncongruentSet (Ico 1 m) m
-
 lemma range_incong_set {m : ℕ} :
   IncongruentSet (range m) m
   := by
