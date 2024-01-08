@@ -98,14 +98,57 @@ lemma neg_one_pow_odd {n m : ℕ} (hn : Odd n) :
  - Definitions
  -/
 
-def QuadraticResidue (a p : ℕ) :=
-  ∃ b, b^2 ≡ a [MOD p]
-@[simp]
-def QuadraticNonresidue (a p : ℕ) :=
-  ¬QuadraticResidue a p
+def QuadraticResidue (a m : ℕ) :=
+  ∃ b, b^2 ≡ a [MOD m]
+@[simp, reducible]
+def QuadraticNonresidue (a m : ℕ) :=
+  ¬QuadraticResidue a m
 
-instance : Decidable (QuadraticResidue a b) := by
-  sorry
+
+/-
+ - Decidability of QuadraticResidue
+ -/
+
+instance : Decidable (QuadraticResidue a m) := by
+  rw [QuadraticResidue]
+  by_cases hm : m = 0
+  · by_cases ha : PerfectSquare a
+    · apply Decidable.isTrue
+      rcases ha with ⟨b, _, h⟩
+      use b
+      rw [h]
+    · apply Decidable.isFalse
+      rw [not_exists] at ha ⊢
+      intro x
+      rw [hm]
+      apply ModEq.mod_zero_iff.not.mpr
+      specialize ha x
+      rw [not_and] at ha
+      by_cases hx : x ≤ a
+      · specialize ha hx
+        exact ha
+      · rw [not_le] at hx
+        have : a < x^2 := calc
+          _ < x         := hx
+          _ ≤ x*x       := le_mul_self x
+          _ = x^2       := (sq x).symm
+        rw [← Ne]
+        symm
+        apply Nat.ne_of_lt this
+  · by_cases h : ∃ b < m, b^2 ≡ a [MOD m]
+    · apply Decidable.isTrue
+      rcases h with ⟨b, _, hb⟩
+      use b
+    · apply Decidable.isFalse
+      rw [not_exists] at h ⊢
+      intro x
+      specialize h (x % m)
+      rw [not_and] at h
+      have : x % m < m := mod_lt _ (pos_iff_ne_zero.mpr hm)
+      specialize h this
+      rw [ModEq, ← pow_mod] at h
+      exact h
+
 
 lemma qr_of_cong_zero {a m : ℕ} (ha : a ≡ 0 [MOD m]) :
   QuadraticResidue a m

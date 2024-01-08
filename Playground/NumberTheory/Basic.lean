@@ -6,7 +6,7 @@ open Nat Finset BigOperators
 
 
 /-
- - Custom Operators
+ - Definitions
  -/
 
 @[simp]
@@ -18,6 +18,10 @@ notation:50 a:50 " ≢ " b:50 " [MOD " n:50 "]" => NotModEq n a b
 def NotDvd (a b : ℕ) :=
   ¬(a ∣ b)
 notation:50 a:50 " ∤ " b:50 => NotDvd a b
+
+@[reducible]
+def Nat.PerfectSquare (a : ℕ) :=
+  ∃ b ≤ a, b^2 = a
 
 
 /-
@@ -107,6 +111,28 @@ lemma Finset.mem_Ico' {a n x : ℕ} (h : x ∈ Ico a (a+n)) :
       rw [add_comm]
       exact h₂
     · simp [h₁]
+
+lemma Nat.sq_le_sq_iff {a b : ℕ} :
+  a^2 ≤ b^2 ↔ a ≤ b
+  := by
+    constructor
+    · intro h
+      apply sqrt_le_sqrt at h
+      rw [sqrt_eq', sqrt_eq'] at h
+      exact h
+    · intro h
+      rw [sq, sq]
+      apply Nat.mul_le_mul h h
+lemma Nat.sq_lt_sq_of_lt {a b : ℕ} (h : a < b) :
+  a^2 < b^2
+  := by
+    by_cases hb : b = 0
+    · exfalso
+      rw [hb] at h
+      apply (not_lt_zero a) h
+    · apply pos_iff_ne_zero.mpr at hb
+      rw [sq, sq]
+      apply Nat.mul_lt_mul' (le_of_lt h) h hb
 
 
 /-
