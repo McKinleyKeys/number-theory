@@ -230,6 +230,25 @@ lemma ModEq.sub_pow_erase {a b m k : ℕ} (hk : k > 0) :
   := by
     sorry
 
+lemma ModEq.add_left_cancel'_iff {a b m : ℕ} (c : ℕ) :
+  c + a ≡ c + b [MOD m] ↔ a ≡ b [MOD m]
+  := by
+    constructor
+    · apply ModEq.add_left_cancel'
+    · apply ModEq.add_left
+
+lemma ModEq.add_right_cancel'_iff {a b m : ℕ} (c : ℕ) :
+  a + c ≡ b + c [MOD m] ↔ a ≡ b [MOD m]
+  := by
+    constructor
+    · apply ModEq.add_right_cancel'
+    · apply ModEq.add_right
+
+lemma ModEq.sub_cong_iff_add_cong {a b c m : ℕ} (h : a ≥ b) :
+  a - b ≡ c [MOD m] ↔ a ≡ c + b [MOD m]
+  := by
+    rw [← ModEq.add_right_cancel'_iff b, Nat.sub_add_cancel h]
+
 lemma ModEq.mod_zero_iff {a b : ℕ} :
   a ≡ b [MOD 0] ↔ a = b
   := by
@@ -333,6 +352,18 @@ lemma Nat.Prime.dvd_iff_dvd_pow {a b p : ℕ} (hp : p.Prime) (hb : b > 0) :
     · intro h
       apply dvd_pow h (Nat.pos_iff_ne_zero.mp hb)
     · apply Prime.dvd_of_dvd_pow hp
+
+lemma cong_zero_of_mul_cong_zero {a b p : ℕ} (hp : p.Prime) (h : a * b ≡ 0 [MOD p]) :
+  a ≡ 0 [MOD p] ∨ b ≡ 0 [MOD p]
+  := by
+    rw [
+      ModEq,
+      ModEq,
+      zero_mod,
+      ← Nat.dvd_iff_mod_eq_zero,
+      ← Nat.dvd_iff_mod_eq_zero,
+    ] at *
+    exact (Nat.Prime.dvd_mul hp).mp h
 
 
 /-
