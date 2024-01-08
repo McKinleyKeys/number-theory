@@ -220,14 +220,14 @@ theorem pow_mod_ord {a k m : ℕ} :
                                           exact pow_ord
       _ = a^(k % o)                     := by rw [one_pow, one_mul]
 
-theorem eq_of_pow_cong_pow_of_lt_of_lt {a k j m : ℕ} (ha : Coprime a m) (h : a^k ≡ a^j [MOD m]) (hk : k < ord a m) (hj : j < ord a m) :
+theorem eq_of_pow_cong_pow {a k j m : ℕ} (ha : Coprime a m) (hk : k < ord a m) (hj : j < ord a m) (h : a^k ≡ a^j [MOD m]) :
   k = j
   := by
     apply Classical.by_contradiction
     intro hkj
     change k ≠ j at hkj
     wlog lt : k < j
-    · specialize this (a := a) (k := j) (j := k) (m := m) ha h.symm hj hk hkj.symm
+    · specialize this (a := a) (k := j) (j := k) (m := m) ha hj hk h.symm hkj.symm
       rw [not_lt] at lt
       have lt' : j < k := lt_of_le_of_ne lt hkj.symm
       apply this lt'
@@ -244,6 +244,19 @@ theorem eq_of_pow_cong_pow_of_lt_of_lt {a k j m : ℕ} (ha : Coprime a m) (h : a
       symm at h
       contradiction
 
+theorem eq_of_pow_cong_pow' {a k j m : ℕ} {S : Finset ℕ} (ha : Coprime a m) (hS : IncongruentSet S (ord a m)) (hk : k ∈ S) (hj : j ∈ S) (h : a^k ≡ a^j [MOD m]) :
+  k = j
+  := by
+    apply hS k hk j hj
+    let o := ord a m
+    have : a^(k%o) ≡ a^(j%o) [MOD m] := calc
+      _ ≡ a^k [MOD m]         := pow_mod_ord
+      _ ≡ a^j [MOD m]         := h
+      _ ≡ a^(j%o) [MOD m]     := pow_mod_ord.symm
+    have hko : k % o < o := mod_lt _ (ord_pos ha)
+    have hjo : j % o < o := mod_lt _ (ord_pos ha)
+    apply eq_of_pow_cong_pow ha hko hjo this
+
 theorem pow_cong_pow_iff_cong {a k j m : ℕ} (ha : Coprime a m) :
   a^k ≡ a^j [MOD m] ↔ k ≡ j [MOD ord a m]
   := by
@@ -258,7 +271,7 @@ theorem pow_cong_pow_iff_cong {a k j m : ℕ} (ha : Coprime a m) :
         _ ≡ a^k [MOD m]       := pow_mod_ord
         _ ≡ a^j [MOD m]       := h
         _ ≡ a^(j%o) [MOD m]   := pow_mod_ord.symm
-      apply eq_of_pow_cong_pow_of_lt_of_lt ha this hk hj
+      apply eq_of_pow_cong_pow ha hk hj this
     · intro h
       rw [ModEq] at h
       calc
@@ -268,6 +281,29 @@ theorem pow_cong_pow_iff_cong {a k j m : ℕ} (ha : Coprime a m) :
                                       apply pow_mod_ord
         _ = a^(j % o)               := by rw [h]
         _ ≡ a^j       [MOD m]       := pow_mod_ord
+
+-- a^k ≢ a^j [MOD m] for any two k, j ∈ S, where S is a set of incongruent residues mod (ord a m)
+lemma pow_injOn_incong {a m : ℕ} {S : Finset ℕ} (ha : Coprime a m) (hS : IncongruentSet S (ord a m)) :
+  Set.InjOn (fun k => a^k % m) S
+  := by
+    intro x hx y hy h
+    change a^x ≡ a^y [MOD m] at h
+    apply eq_of_pow_cong_pow' ha hS hx hy h
+-- a^k ≢ a^j [MOD m] for any two k, j < ord a m
+lemma pow_injOn_range_ord {a m : ℕ} (ha : Coprime a m) :
+  Set.InjOn (fun k => a^k % m) (range (ord a m))
+  :=
+    pow_injOn_incong ha range_incong_set
+lemma card_image_pow_eq_card {a m : ℕ} {S : Finset ℕ} (ha : Coprime a m) (hS : IncongruentSet S (ord a m)) :
+  card (image (fun k => a^k % m) S) = card S
+  :=
+    card_image_iff.mpr (pow_injOn_incong ha hS)
+lemma card_image_pow_eq_ord {a m : ℕ} (ha : Coprime a m) :
+  card (image (fun k => a^k % m) (range (ord a m))) = ord a m
+  := by
+    nth_rw 2 [← card_range (ord a m)]
+    apply card_image_pow_eq_card ha
+    apply range_incong_set
 
 /-
  - Page 92 of https://resources.saylor.org/wwwresources/archived/site/wp-content/uploads/2013/05/An-Introductory-in-Elementary-Number-Theory.pdf
@@ -399,23 +435,15 @@ theorem ord_count {p t : ℕ} (hp : p.Prime) (ht : t ∣ p-1) :
           apply ord_pos ha
         let pows := image (fun k => a^k % p) (range d)
         let pows' := image (fun k => a^k % p) d.coprimes
-        have inj : Set.InjOn (fun k => a^k % p) (range d) := by
-          intro x hx y hy h
-          change a^x ≡ a^y [MOD p] at h
-          apply eq_of_pow_cong_pow_of_lt_of_lt ha h
-          all_goals rw [ha']
-          · apply mem_range.mp hx
-          · apply mem_range.mp hy
         have card_pows : card pows = d := by
-          rw [← card_range d]
-          apply card_image_iff.mpr inj
+          unfold_let pows
+          rw [← ha']
+          apply card_image_pow_eq_ord ha
         have card_pows' : card pows' = φ d := by
           rw [totient_eq_card_coprimes]
-          apply card_image_iff.mpr
-          apply Set.InjOn.mono _ inj
-          intro x hx
-          apply mem_coprimes₂ at hx
-          apply mem_range.mpr hx
+          apply card_image_pow_eq_card ha
+          rw [ha']
+          apply coprimes_incong_set
         have : filter (fun x => x^d ≡ 1 [MOD p]) (range p) = pows := by
           symm
           apply eq_of_subset_of_card_le
@@ -562,19 +590,52 @@ theorem primitive_root_count {p : ℕ} (hp : p.Prime) :
     ord_count' hp (dvd_refl (p-1))
 
 theorem exists_primitive_root {p : ℕ} (hp : p.Prime) :
-  ∃ a < p, PrimitiveRoot a p
+  ∃ r < p, PrimitiveRoot r p
   := by
     have : card p.primitive_roots > 0 := by
       rw [primitive_root_count hp]
       apply totient_pos
       simp [Prime.one_lt hp]
     apply card_pos.mp at this
-    change ∃ a, a ∈ p.primitive_roots at this
-    rcases this with ⟨a, ha⟩
-    rw [primitive_roots, mem_filter, mem_range] at ha
-    use a
+    change ∃ r, r ∈ p.primitive_roots at this
+    rcases this with ⟨r, hr⟩
+    rw [primitive_roots, mem_filter, mem_range] at hr
+    use r
 
+theorem primitive_root_generates {r t m : ℕ} (hm : m > 1) (ht : Coprime t m) (hr : PrimitiveRoot r m) :
+  ∃ k ∈ Ico 1 p, r^k ≡ t [MOD m]
+  := by
+    let span := image (fun k => r^k % m) (Ico 1 m)
+    have hr' : Coprime r m := coprime_of_primitive_root hm hr
+    have card_span : card span = m - 1 := by
+      rw [← card_Ico_one m]
+      apply card_image_pow_eq_card hr'
+      rw [hr]
+      have : IncongruentSet (Ico 1 (1 + (m-1))) (m-1) := Ico_incong_set
+      rw [← Nat.add_sub_assoc (le_of_lt hm), Nat.add_sub_cancel_left] at this
+      exact this
+    have subset : span ⊆ Ico 1 m := by
+      apply image_subset_iff.mpr
+      intro k
+      rw [mem_Ico]
+      constructor
+      · 
+        sorry
+      · apply mod_lt
+        linarith [hm]
+        sorry
+    sorry
+-- theorem Nat.Prime.primitive_root_generates {r t m : ℕ} (hm : m > 1) (ht : Coprime t m) (hr : PrimitiveRoot r m) :
+
+-- Every residue is congruent to r^k where r is a primitive root
 theorem cong_primitive_root_pow {a p : ℕ} (hp : p.Prime) (ha : Coprime a p) :
   ∃ r < p, PrimitiveRoot r p ∧ ∃ k > 0, r^k ≡ a [MOD p]
   := by
+    rcases (exists_primitive_root hp) with ⟨r, hr₁, hr₂⟩
+    use r
+    constructor
+    · assumption
+    constructor
+    · assumption
+    
     sorry
