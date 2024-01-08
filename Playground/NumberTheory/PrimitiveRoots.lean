@@ -75,7 +75,7 @@ theorem primitive_root_generates {r t m : ℕ} (hm : m > 1) (ht : Coprime t m) (
       rw [mem_Ico] at hk ⊢
       constructor
       · apply one_le_iff_ne_zero.mpr
-        apply (not_iff_not.mpr (Nat.dvd_iff_mod_eq_zero m (r^k))).mp
+        apply (Nat.dvd_iff_mod_eq_zero m (r^k)).not.mp
         apply not_dvd_of_coprime (Nat.ne_of_lt hm).symm
         apply coprime_pow hr'
       · apply mod_lt
@@ -93,7 +93,10 @@ theorem primitive_root_generates {r t m : ℕ} (hm : m > 1) (ht : Coprime t m) (
         linarith [hm]
     rw [← eq, mem_image] at this
     exact this
--- theorem Nat.Prime.primitive_root_generates {r t m : ℕ} (hm : m > 1) (ht : Coprime t m) (hr : PrimitiveRoot r m) :
+theorem Nat.Prime.primitive_root_generates {r t p : ℕ} (hp : p.Prime) (ht : Coprime t p) (hr : PrimitiveRoot r p) :
+  ∃ k ∈ Ico 1 p, r^k ≡ t [MOD p]
+  :=
+    _root_.primitive_root_generates (Prime.one_lt hp) ht hr
 
 -- Every residue is congruent to r^k where r is a primitive root
 theorem cong_primitive_root_pow {a p : ℕ} (hp : p.Prime) (ha : Coprime a p) :
@@ -105,5 +108,9 @@ theorem cong_primitive_root_pow {a p : ℕ} (hp : p.Prime) (ha : Coprime a p) :
     · assumption
     constructor
     · assumption
-    
-    sorry
+    rcases (Prime.primitive_root_generates hp ha hr₂) with ⟨k, hk₁, hk₂⟩
+    use k
+    constructor
+    · rw [mem_Ico] at hk₁
+      apply pos_iff_one_le.mpr hk₁.left
+    · exact hk₂
