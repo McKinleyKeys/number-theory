@@ -76,6 +76,22 @@ lemma Finset.range_eq_insert_zero_Ico_one {n : ℕ} (h : n > 0) :
   range n = insert 0 (Ico 1 n)
   := by
     rw [range_eq_Ico, one_eq_succ_zero, Ico_insert_succ_left h]
+lemma Finset.card_Ico_one (n : ℕ) :
+  card (Ico 1 n) = n - 1
+  := by
+    simp
+
+lemma Finset.mem_Ico' {a n x : ℕ} (h : x ∈ Ico a (a+n)) :
+  ∃ c < n, x = a + c
+  := by
+    rw [mem_Ico] at h
+    rcases h with ⟨h₁, h₂⟩
+    use x - a
+    constructor
+    · apply Nat.sub_lt_right_of_lt_add h₁
+      rw [add_comm]
+      exact h₂
+    · simp [h₁]
 
 
 /-
@@ -244,6 +260,55 @@ lemma ModEq.eq_of_le_of_le {a b m : ℕ} (h : a ≡ b [MOD m]) (ha : 1 ≤ a ∧
         apply lt_add_one_iff.mpr hb₂
     dsimp [Set.InjOn] at inj
     apply inj a_mem b_mem h
+
+
+/-
+ - Incongruent Sets
+ -/
+
+def IncongruentSet (S : Finset ℕ) (m : ℕ) : Prop :=
+  ∀ x ∈ S, ∀ y ∈ S, x ≡ y [MOD m] → x = y
+
+lemma incong_set_of_subset {m : ℕ} {S T : Finset ℕ} (hT : IncongruentSet T m) (hS : S ⊆ T) :
+  IncongruentSet S m
+  := by
+    intro x hx y hy hxy
+    apply hS at hx
+    apply hS at hy
+    apply hT x hx y hy hxy
+
+lemma Ico_incong_set {a m : ℕ} :
+  IncongruentSet (Ico a (a+m)) m
+  := by
+    intro x hx y hy hxy
+    apply mem_Ico' at hx
+    apply mem_Ico' at hy
+    rcases hx with ⟨c, hc, hxc⟩
+    rcases hy with ⟨d, hd, hyd⟩
+    rw [hxc, hyd] at hxy
+    apply ModEq.add_left_cancel' at hxy
+    rw [ModEq, mod_eq_of_lt hc, mod_eq_of_lt hd] at hxy
+    rw [hxc, hyd, hxy]
+
+lemma Ico_one_incong_set {m : ℕ} :
+  IncongruentSet (Ico 1 m) m
+
+lemma range_incong_set {m : ℕ} :
+  IncongruentSet (range m) m
+  := by
+    rw [range_eq_Ico]
+    nth_rw 1 [← zero_add m]
+    apply Ico_incong_set
+
+lemma incong_set_of_subset_range {m : ℕ} {S : Finset ℕ} (hS : S ⊆ range m) :
+  IncongruentSet S m
+  :=
+    incong_set_of_subset range_incong_set hS
+
+lemma incong_set_of_subset_Ico {a m : ℕ} {S : Finset ℕ} (hS : S ⊆ Ico a (a+m)) :
+  IncongruentSet S m
+  :=
+    incong_set_of_subset Ico_incong_set hS
 
 
 /-
@@ -434,6 +499,18 @@ lemma mem_coprimes₃ {a n : ℕ} (hn : n ≠ 1) (ha : a ∈ n.coprimes) :
     simp at ha
     rw [ha, coprime_zero_left] at right
     simp [right]
+
+lemma coprimes_subset_range {n : ℕ} :
+  n.coprimes ⊆ range n
+  := by
+    intro a ha
+    rw [mem_range]
+    apply mem_coprimes₂ ha
+
+lemma coprimes_incong_set {n : ℕ} :
+  IncongruentSet n.coprimes n
+  :=
+    incong_set_of_subset range_incong_set coprimes_subset_range
 
 lemma totient_eq_card_coprimes (n : ℕ) :
   φ n = card n.coprimes
