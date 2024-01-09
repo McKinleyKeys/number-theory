@@ -231,30 +231,48 @@ lemma ModEq.card_pow {m k : ℕ} (hk : k > 0) :
     apply Dvd.dvd.modEq_zero_nat
     apply dvd_pow (dvd_refl m) hk
 
-lemma ModEq.add_left_erase {a b m : ℕ} :
-  m + a ≡ b [MOD m] ↔ a ≡ b [MOD m]
-  := by
-    sorry
 lemma ModEq.add_left_mul_erase {a b m k : ℕ} :
   k*m + a ≡ b [MOD m] ↔ a ≡ b [MOD m]
   := by
-    sorry
+    have : m ∣ k*m := by simp
+    rw [
+      ModEq,
+      add_mod,
+      (dvd_iff_mod_eq_zero _ _).mp this,
+      zero_add,
+      mod_mod,
+      ← ModEq,
+    ]
+lemma ModEq.add_left_erase {a b m : ℕ} :
+  m + a ≡ b [MOD m] ↔ a ≡ b [MOD m]
+  := by
+    nth_rw 2 [← one_mul m]
+    exact add_left_mul_erase
 lemma ModEq.add_left_pow_erase {a b m k : ℕ} (hk : k > 0) :
   m^k + a ≡ b [MOD m] ↔ a ≡ b [MOD m]
   := by
-    sorry
-lemma ModEq.sub_erase {a b m : ℕ} :
-  a - m ≡ b [MOD m] ↔ a ≡ b [MOD m]
-  := by
-    sorry
-lemma ModEq.sub_mul_erase {a b m k : ℕ} :
+    apply pos_iff_ne_zero.mp at hk
+    apply exists_eq_succ_of_ne_zero at hk
+    rcases hk with ⟨j, hj⟩
+    rw [hj, Nat.pow_succ, add_left_mul_erase]
+lemma ModEq.sub_mul_erase {a b m k : ℕ} (h : a ≥ k*m) :
   a - k*m ≡ b [MOD m] ↔ a ≡ b [MOD m]
   := by
-    sorry
-lemma ModEq.sub_pow_erase {a b m k : ℕ} (hk : k > 0) :
+    rw [← add_left_mul_erase (k := k), Nat.add_sub_cancel' h]
+lemma ModEq.sub_erase {a b m : ℕ} (h : a ≥ m) :
+  a - m ≡ b [MOD m] ↔ a ≡ b [MOD m]
+  := by
+    nth_rw 2 [← one_mul m]
+    rw [← one_mul m] at h
+    exact sub_mul_erase h
+lemma ModEq.sub_pow_erase {a b m k : ℕ} (hk : k > 0) (h : a ≥ m^k) :
   a - m^k ≡ b [MOD m] ↔ a ≡ b [MOD m]
   := by
-    sorry
+    apply pos_iff_ne_zero.mp at hk
+    apply exists_eq_succ_of_ne_zero at hk
+    rcases hk with ⟨j, hj⟩
+    rw [hj, Nat.pow_succ] at h
+    rw [hj, Nat.pow_succ, sub_mul_erase h]
 
 lemma ModEq.add_left_cancel'_iff {a b m : ℕ} (c : ℕ) :
   c + a ≡ c + b [MOD m] ↔ a ≡ b [MOD m]
