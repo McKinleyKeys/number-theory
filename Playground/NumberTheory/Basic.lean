@@ -66,6 +66,25 @@ lemma sub_one_sq {n : ℕ} (h : n > 0) :
     ]
     ring_nf
 
+lemma two_mul_le_sq_of_ne_one {n : ℕ} (hn : n ≠ 1) :
+  2*n ≤ n^2
+  := by
+    by_cases hn' : n = 0
+    · norm_num [hn']
+    · have : n ≥ 2 := (two_le_iff n).mpr (And.intro hn' hn)
+      rw [sq]
+      apply Nat.mul_le_mul_right _ this
+
+lemma two_mul_le_sq_add_one {n : ℕ} :
+  2*n ≤ n^2 + 1
+  := by
+    by_cases hn : n = 1
+    · norm_num [hn]
+    · calc
+        _ ≤ n^2       := two_mul_le_sq_of_ne_one hn
+        _ ≤ n^2 + 1   := by
+                        simp
+
 lemma lt_of_dvd_sub {a n : ℕ} (hn : 1 < n) (ha : a ∣ n-1) :
   a < n
   := by

@@ -63,15 +63,15 @@ lemma sqrt_one {x p : ℕ} (hp : p.Prime) :
           x + 1 ≡ 0 [MOD p]     := this
           _ ≡ p [MOD p]         := ModEq.card.symm
 
-lemma neg_one_sq_cong_one {m : ℕ} (h : m > 0) :
+lemma neg_one_sq_cong_one {m : ℕ} (hm : m > 0) :
   (m-1)^2 ≡ 1 [MOD m]
   := calc
     (m-1)^2
-    _ = m^2 + 1 - 2*m       := sub_one_sq h
-    _ ≡ 1 [MOD m]           := by
-                              apply (ModEq.sub_mul_erase).mpr
-                              apply (ModEq.add_left_pow_erase two_pos).mpr
-                              rfl
+    _ = m^2 + 1 - 2*m       := sub_one_sq hm
+    _ ≡ m^2 + 1 [MOD m]     := by
+                              apply (ModEq.sub_mul_erase _).mpr rfl
+                              apply two_mul_le_sq_add_one
+    _ ≡ 1 [MOD m]           := (ModEq.add_left_pow_erase two_pos).mpr rfl
 
 lemma neg_one_pow_even {n m : ℕ} (hm : m > 0) (hn : Even n) :
   (m-1)^n ≡ 1 [MOD m]
