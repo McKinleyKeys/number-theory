@@ -55,7 +55,17 @@ lemma Nat.Poly.one_le_size {p : Nat.Poly} :
   :=
     pos_iff_one_le.mp p.hd
 
+lemma Int.Poly.one_le_size {p : Int.Poly} :
+  1 ≤ p.data.size
+  :=
+    _root_.pos_iff_one_le.mp p.hd
+
 lemma Nat.Poly.size_eq_degree_add_one {p : Nat.Poly} :
+  p.data.size = p.degree + 1
+  := by
+    rw [degree, Nat.sub_add_cancel one_le_size]
+
+lemma Int.Poly.size_eq_degree_add_one {p : Int.Poly} :
   p.data.size = p.degree + 1
   := by
     rw [degree, Nat.sub_add_cancel one_le_size]
@@ -63,14 +73,12 @@ lemma Nat.Poly.size_eq_degree_add_one {p : Nat.Poly} :
 lemma Nat.Poly.eval' {p : Nat.Poly} {x : ℕ} :
   p.eval x = ∑ k in Icc 0 p.degree, (p.coeff k) * x^k
   := by
-    rw [eval, size_eq_degree_add_one, ]
-    sorry
+    rw [eval, size_eq_degree_add_one, range_add_one_eq_Icc]
 
 lemma Int.Poly.eval' {p : Int.Poly} {x : ℤ} :
   p.eval x = ∑ k in Icc 0 p.degree, (p.coeff k) * x^k
   := by
-    rw [eval]
-    sorry
+    rw [eval, size_eq_degree_add_one, range_add_one_eq_Icc]
 
 lemma Nat.Poly.eval_of_deg_zero {p : Nat.Poly} {x : ℕ} (hp : p.degree = 0) :
   p.eval x = p.coeff 0
@@ -85,15 +93,27 @@ lemma Int.Poly.eval_of_deg_zero {p : Int.Poly} {x : ℤ} (hp : p.degree = 0) :
     simp
 
 
-lemma Int.Poly.coeff_ofFn {c : ℕ → ℤ} {n i : ℕ} (h : i ≤ n) :
-  (Int.Poly.ofFn n c).coeff i = c i
-  := by
-    sorry
-
 lemma Int.Poly.degree_ofFn {c : ℕ → ℤ} {n : ℕ} :
   (Int.Poly.ofFn n c).degree = n
   := by
-    sorry
+    rw [ofFn, degree]
+    simp
+
+lemma Int.Poly.coeff_ofFn {c : ℕ → ℤ} {n i : ℕ} (h : i ≤ n) :
+  (Int.Poly.ofFn n c).coeff i = c i
+  := by
+    rw [ofFn, coeff]
+    simp only [Array.getD_eq_get?]
+    have : (Array.map c (Array.range (n + 1))).size = n + 1 := by
+      simp
+    rw [Array.get?, dif_pos]
+    · simp
+      rw [Array.getElem_map]
+      congr
+      rw [Array.range (n+1)]
+      sorry
+    · 
+      sorry
 
 
 lemma Icc_eq_insert_Icc {a b : ℕ} :
@@ -108,11 +128,6 @@ lemma sum_sub_sum {S : Finset α} {f g : α → ℤ} :
 
 lemma sum_eq_sum {S : Finset ℕ} {f g : ℕ → ℤ} (h : ∀ i ∈ S, f i = g i) :
   ∑ i in S, f i = ∑ i in S, g i
-  := by
-    sorry
-
-theorem telescoping_sum {n : ℕ} {f : ℕ → ℕ} (h : Monotone f) :
-  ∑ i in range n, f (i + 1) - f i = f n - f 0
   := by
     sorry
 

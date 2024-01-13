@@ -178,14 +178,19 @@ lemma Nat.sq_lt_sq_of_lt {a b : ℕ} (h : a < b) :
       rw [sq, sq]
       apply Nat.mul_lt_mul' (le_of_lt h) h hb
 
+lemma Int.neg_of_ne_zero_of_not_pos {n : ℤ} (h₁ : n ≠ 0) (h₂ : ¬n > 0) :
+  n < 0
+  := by
+    simp at h₂
+    exact lt_of_le_of_ne h₂ h₁
+
 lemma Int.not_dvd_of_ne_zero_of_lt_of_gt_neg {a n : ℤ} (h₁ : a ≠ 0) (h₂ : a < n) (h₃ : a > -n) :
   n ∤ a
   := by
     intro h
     rcases h with ⟨c, hc⟩
     rw [hc] at h₁ h₂ h₃
-    nth_rw 2 [← mul_one n] at h₂
-    rw [← mul_neg_one] at h₃
+    rw [gt_iff_lt] at h₃
     simp at h₁
     rw [not_or] at h₁
     by_cases hn : n = 0
@@ -193,13 +198,13 @@ lemma Int.not_dvd_of_ne_zero_of_lt_of_gt_neg {a n : ℤ} (h₁ : a ≠ 0) (h₂ 
       simp at h₂
     · by_cases hn' : n > 0
       · simp [hn'] at h₂
-        simp at h₃
         rw [neg_lt, ← mul_neg, mul_lt_iff_lt_one_right hn', neg_lt] at h₃
         have : c = 0 := by
           linarith [h₂, h₃]
         apply h₁.right this
-      · 
-        sorry
+      · have : -n < n := lt_trans h₃ h₂
+        rw [neg_lt_self_iff] at this
+        contradiction
 
 lemma Int.sub_lt {a b n : ℤ} (ha : a < n) (hb : 0 ≤ b) :
   a - b < n
@@ -207,6 +212,19 @@ lemma Int.sub_lt {a b n : ℤ} (ha : a < n) (hb : 0 ≤ b) :
     apply lt_of_le_of_lt (b := a)
     · simp [hb]
     · exact ha
+
+lemma Finset.range_add_one_eq_Icc {n : ℕ} :
+  range (n + 1) = Icc 0 n
+  := by
+    ext a
+    rw [mem_range, mem_Icc]
+    constructor
+    · intro ha
+      constructor
+      · simp
+      · apply lt_add_one_iff.mp ha
+    · intro ha
+      apply lt_add_one_iff.mpr ha.right
 
 
 /-
