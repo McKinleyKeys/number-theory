@@ -144,6 +144,45 @@ lemma Finset.card_Ico_one (n : ℕ) :
   := by
     simp
 
+lemma Finset.range_add_one_eq_Icc {n : ℕ} :
+  range (n + 1) = Icc 0 n
+  := by
+    ext x
+    rw [mem_range, mem_Icc]
+    constructor
+    · intro hx
+      constructor
+      · simp
+      · apply lt_add_one_iff.mp hx
+    · intro hx
+      apply lt_add_one_iff.mpr hx.right
+
+lemma Finset.insert_Icc_add_one {a b : ℕ} (h : a ≤ b) :
+  insert a (Icc (a + 1) b) = Icc a b
+  := by
+    ext x
+    rw [mem_insert, mem_Icc, mem_Icc]
+    constructor
+    · intro hx
+      rcases hx with left | right
+      · constructor
+        · simp [left]
+        · rw [left]
+          exact h
+      · constructor
+        · apply le_trans (by simp) right.left
+        · exact right.right
+    · intro hx
+      by_cases hxa : x = a
+      · left
+        exact hxa
+      · right
+        rw [← Ne] at hxa
+        constructor
+        · apply add_one_le_iff.mpr
+          apply lt_of_le_of_ne hx.left hxa.symm
+        · exact hx.right
+
 lemma Finset.mem_Ico' {a n x : ℕ} (h : x ∈ Ico a (a+n)) :
   ∃ c < n, x = a + c
   := by
@@ -212,19 +251,6 @@ lemma Int.sub_lt {a b n : ℤ} (ha : a < n) (hb : 0 ≤ b) :
     apply lt_of_le_of_lt (b := a)
     · simp [hb]
     · exact ha
-
-lemma Finset.range_add_one_eq_Icc {n : ℕ} :
-  range (n + 1) = Icc 0 n
-  := by
-    ext a
-    rw [mem_range, mem_Icc]
-    constructor
-    · intro ha
-      constructor
-      · simp
-      · apply lt_add_one_iff.mp ha
-    · intro ha
-      apply lt_add_one_iff.mpr ha.right
 
 
 /-

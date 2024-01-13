@@ -28,12 +28,6 @@ lemma Poly'.eval_of_deg_zero [CommSemiring α] {p : Poly' α} {x : α} (hp : p.d
     rw [eval, hp]
     simp
 
-
-lemma Icc_eq_insert_Icc {a b : ℕ} :
-  Icc a b = insert a (Icc (a + 1) b)
-  := by
-    sorry
-
 lemma sum_sub_sum {S : Finset α} {f g : α → ℤ} :
   ∑ i in S, f i - ∑ i in S, g i = ∑ i in S, (f i - g i)
   := by
@@ -85,11 +79,6 @@ lemma sum_Icc_succ {a b : ℕ} {f : ℕ → α} [AddCommMonoid α] :
 
 lemma sum_Icc_one {n : ℕ} {f : ℕ → α} [AddCommMonoid α] [HSub α α α] :
   ∑ i in Icc 1 n, f i = (∑ i in range (n + 1), f i) - f 0
-  := by
-    sorry
-
-lemma Icc_zero_eq_range_succ {n : ℕ} :
-  Icc 0 n = range (succ n)
   := by
     sorry
 
@@ -145,7 +134,7 @@ theorem lagrange's_theorem {n p : ℕ} {f : Poly' ℤ} (hf : f.degree = n) (hp :
                     Poly'.eval,
                     hf,
                     sum_sub_sum,
-                    Icc_eq_insert_Icc,
+                    ← insert_Icc_add_one (by simp),
                     sum_insert (by simp),
                     _root_.pow_zero,
                     mul_one,
@@ -169,7 +158,7 @@ theorem lagrange's_theorem {n p : ℕ} {f : Poly' ℤ} (hf : f.degree = n) (hp :
                   simp (config := {zeta:=false}) only [mul_comm, mul_assoc]
                   rw [← mul_sum]
                   apply congrArg
-                  rw [sum_Icc_one, sum_mul_sum_mul, Icc_zero_eq_range_succ, sum_range_zero, mul_zero, sub_zero]
+                  rw [sum_Icc_one, sum_mul_sum_mul, ← Finset.range_add_one_eq_Icc, sum_range_zero, mul_zero, sub_zero]
                   apply sum_eq_sum
                   intro i _
                   congr
