@@ -6,18 +6,43 @@ open Nat Finset BigOperators
 
 
 /-
- - Definitions
+ - NotModEq
  -/
 
 @[simp]
-def NotModEq (n a b : ℕ) :=
+def Nat.NotModEq (n a b : ℕ) :=
   ¬(a ≡ b [MOD n])
-notation:50 a:50 " ≢ " b:50 " [MOD " n:50 "]" => NotModEq n a b
+notation:50 a:50 " ≢ " b:50 " [MOD " n:50 "]" => Nat.NotModEq n a b
 
 @[simp]
-def NotDvd (a b : ℕ) :=
-  ¬(a ∣ b)
-notation:50 a:50 " ∤ " b:50 => NotDvd a b
+def Int.NotModEq (n a b : ℤ) :=
+  ¬(a ≡ b [ZMOD n])
+notation:50 a:50 " ≢ " b:50 " [ZMOD " n:50 "]" => Int.NotModEq n a b
+
+
+/-
+ - NotDvd
+ -/
+
+class NotDvd (α : Type _) where
+  not_dvd : α → α → Prop
+
+instance : NotDvd Nat := ⟨fun a b => ¬a ∣ b⟩
+instance : NotDvd Int := ⟨fun a b => ¬a ∣ b⟩
+
+infix:50 " ∤ " => NotDvd.not_dvd
+
+lemma Nat.not_dvd {a b : ℕ} :
+  a ∤ b ↔ ¬a ∣ b
+  := Iff.rfl
+lemma Int.not_dvd {a b : ℤ} :
+  a ∤ b ↔ ¬a ∣ b
+  := Iff.rfl
+
+
+/-
+ - PerfectSquare
+ -/
 
 @[reducible]
 def Nat.PerfectSquare (a : ℕ) :=
@@ -620,7 +645,7 @@ lemma not_dvd_of_coprime {a m : ℕ} (hm : m ≠ 1) (ha : Coprime a m) :
   m ∤ a
   := by
     contrapose ha
-    rw [NotDvd, Classical.not_not, Nat.gcd_eq_right_iff_dvd] at ha
+    rw [not_dvd, Classical.not_not, Nat.gcd_eq_right_iff_dvd] at ha
     rw [Coprime, ha]
     exact hm
 
@@ -637,7 +662,7 @@ lemma mod_pos_of_coprime {a m : ℕ} (hm : m ≠ 1) (ha : Coprime a m) :
     apply not_dvd_of_coprime hm at ha
     contrapose ha
     apply Nat.eq_zero_of_not_pos at ha
-    rw [NotDvd, Classical.not_not]
+    rw [not_dvd, Classical.not_not]
     apply (Nat.dvd_iff_mod_eq_zero _ _).mpr ha
 
 
