@@ -346,6 +346,12 @@ lemma ModEq.not_mod_zero_iff {a b : ℕ} :
   := by
     rw [NotModEq, ModEq, mod_zero, mod_zero]
 
+lemma ModEq.cong_zero_iff_dvd {a m : ℕ} :
+  a ≡ 0 [MOD m] ↔ m ∣ a
+  := by
+    rw [ModEq, zero_mod]
+    exact (Nat.dvd_iff_mod_eq_zero _ _).symm
+
 /- TODO: Consider removing -/
 lemma ModEq.eq_of_le_of_le {a b m : ℕ} (h : a ≡ b [MOD m]) (ha : 1 ≤ a ∧ a ≤ m) (hb : 1 ≤ b ∧ b ≤ m) :
   a = b
