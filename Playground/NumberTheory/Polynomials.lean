@@ -90,6 +90,11 @@ lemma Int.Poly.coeff_ofFn {c : ℕ → ℤ} {n i : ℕ} (h : i ≤ n) :
   := by
     sorry
 
+lemma Int.Poly.degree_ofFn {c : ℕ → ℤ} {n : ℕ} :
+  (Int.Poly.ofFn n c).degree = n
+  := by
+    sorry
+
 
 lemma Icc_eq_insert_Icc {a b : ℕ} :
   Icc a b = insert a (Icc (a + 1) b)
@@ -181,24 +186,29 @@ theorem sum_mul_sum_mul {n : ℕ} {a t : ℕ → R} {b : ℕ → ℕ → R} [Com
 theorem lagrange's_theorem {n p : ℕ} {f : Int.Poly} (hf : f.degree = n) (hp : p.Prime) (h : ↑p ∤ f.coeff n) :
   card (filter (fun (x : ℕ) => f.eval ↑x ≡ 0 [ZMOD ↑p]) (range p)) ≤ n
   := by
+    revert f
     induction' n with m hm
+    all_goals intro f hf h
     · rw [Nat.le_zero, Finset.card_eq_zero, filter_eq_empty_iff]
-      intro x hx
+      intro x _
       rw [f.eval_of_deg_zero hf, Int.ModEq]
       simp
       apply h
     · by_contra h'
       rw [not_le] at h'
-      have hf : f.degree = m.succ := by sorry
-      have x₀ : ℤ := by sorry
-      -- have hx₀ : f.eval x₀ ≡ 0 [MOD p] := by sorry
+      -- X = roots of f
+      let X := filter (fun (x : ℕ) => f.eval ↑x ≡ 0 [ZMOD ↑p]) (range p)
+      change succ m < card X at h'
+      have h'' := h'
+      apply lt_trans (succ_pos _) at h''
+      rw [Finset.card_pos, Finset.Nonempty] at h''
+      rcases h'' with ⟨x₀, hx₀⟩
+      rw [mem_filter] at hx₀
+      rcases hx₀ with ⟨hx₀, hx₀'⟩
       let c (i : ℕ) := f.coeff i
-      have (x : ℤ) (j : ℕ) : (x - x₀) * ∑ i in range j, x^i * x₀^(j - i - 1) = x^j - x₀^j :=
-        mul_eq_telescoping_sum
       let f' := Int.Poly.ofFn
         m
         (fun i => ∑ j in Icc (i + 1) (m + 1), (c j) * x₀^(j - i - 1))
-      have hf' : f'.degree = m := by sorry
       have (x : ℤ) : f.eval x - f.eval x₀ = (x - x₀) * (f'.eval x) := calc
         _ = ∑ i in Icc 1 m.succ, (c i) * (x^i - x₀^i)
                 := by
@@ -217,16 +227,16 @@ theorem lagrange's_theorem {n p : ℕ} {f : Int.Poly} (hf : f.degree = n) (hp : 
                     zero_add,
                   ]
                   apply sum_eq_sum
-                  intro i hi
+                  intro i _
                   rw [mul_sub_left_distrib]
         _ = ∑ j in Icc 1 m.succ, (c j) * (x - x₀) * ∑ i in range j, x^i * x₀^(j - i - 1)
                 := by
                   apply sum_eq_sum
-                  intro i hi
+                  intro i _
                   rw [mul_assoc, mul_eq_telescoping_sum]
         _ = (x - x₀) * (f'.eval x)
                 := by
-                  rw [Int.Poly.eval', hf']
+                  rw [Int.Poly.eval', Int.Poly.degree_ofFn]
                   simp (config := {zeta:=false}) only [mul_comm, mul_assoc]
                   rw [← mul_sum]
                   apply congrArg
@@ -238,8 +248,62 @@ theorem lagrange's_theorem {n p : ℕ} {f : Int.Poly} (hf : f.degree = n) (hp : 
                   rw [Int.Poly.coeff_ofFn]
                   rw [mem_range, lt_succ] at hi
                   exact hi
-      
-      sorry
+      have hf' : ↑p ∤ f'.coeff m := by
+        rw [Int.Poly.coeff_ofFn]
+        simp
+        apply h
+        rfl
+      specialize hm (f := f') (Int.Poly.degree_ofFn) hf'
+      -- X' = roots of f except x₀
+      let X' := erase X x₀
+      have card_X' : card X' ≥ succ m := by
+        apply le_pred_of_lt at h'
+        apply le_trans h' pred_card_le_card_erase
+      have hX' : ∀ xₖ ∈ X', f'.eval xₖ ≡ 0 [ZMOD ↑p] := by
+        intro xₖ hxₖ
+        have : (xₖ - x₀) * (f'.eval xₖ) ≡ 0 [ZMOD ↑p] := calc
+          _ = (f.eval xₖ) - (f.eval x₀)     := by rw [← this xₖ]
+          _ ≡ (f.eval xₖ) [ZMOD ↑p]         := by
+                                              nth_rw 2 [← sub_zero (f.eval xₖ)]
+                                              apply Int.ModEq.sub_left _ hx₀'
+          _ ≡ 0 [ZMOD ↑p]                   := by
+                                              rcases mem_erase.mp hxₖ with ⟨_, hxₖ'⟩
+                                              exact (mem_filter.mp hxₖ').right
+        rw [Int.ModEq, Int.zero_emod, ← Int.dvd_iff_emod_eq_zero] at this
+        apply Int.Prime.dvd_mul' hp at this
+        rcases this with left | right
+        · have : (p : ℤ) ∤ xₖ - x₀ := by
+            apply Int.not_dvd_of_ne_zero_of_lt_of_gt_neg
+            · apply sub_eq_zero.not.mpr
+              rw [mem_erase] at hxₖ
+              simp [hxₖ.left]
+            · apply Int.sub_lt
+              · rw [mem_erase, mem_filter, mem_range] at hxₖ
+                rcases hxₖ with ⟨_, xₖ_lt_p, _⟩
+                simp [xₖ_lt_p]
+              · simp
+            · rw [gt_iff_lt, neg_lt, neg_sub]
+              apply Int.sub_lt
+              · rw [mem_range] at hx₀
+                simp [hx₀]
+              · simp
+          contradiction
+        · apply Int.ModEq.cong_zero_iff_dvd.mpr right
+      have : succ m ≤ card (filter (fun (x : ℕ) => f'.eval x ≡ 0 [ZMOD p]) (range p)) := calc
+        _ ≤ card X - 1      := le_sub_one_of_lt h'
+        _ ≤ card X'         := pred_card_le_card_erase
+        _ ≤ card (filter (fun (x : ℕ) => f'.eval x ≡ 0 [ZMOD p]) (range p))
+                  := by
+                    apply Finset.card_le_of_subset
+                    intro xₖ hxₖ
+                    rw [mem_filter]
+                    constructor
+                    · apply mem_of_mem_erase at hxₖ
+                      rw [mem_filter] at hxₖ
+                      exact hxₖ.left
+                    · apply hX' xₖ hxₖ
+      rw [add_one_le_iff, lt_iff_not_ge] at this
+      contradiction
 
 -- theorem pow_cong_one_solutions {n p : ℕ} (hp : p.Prime) (hn : n ∣ p-1) :
 --   card (filter (fun x => x^n ≡ 1 [MOD p]) (range p)) = n

@@ -178,6 +178,36 @@ lemma Nat.sq_lt_sq_of_lt {a b : ℕ} (h : a < b) :
       rw [sq, sq]
       apply Nat.mul_lt_mul' (le_of_lt h) h hb
 
+lemma Int.not_dvd_of_ne_zero_of_lt_of_gt_neg {a n : ℤ} (h₁ : a ≠ 0) (h₂ : a < n) (h₃ : a > -n) :
+  n ∤ a
+  := by
+    intro h
+    rcases h with ⟨c, hc⟩
+    rw [hc] at h₁ h₂ h₃
+    nth_rw 2 [← mul_one n] at h₂
+    rw [← mul_neg_one] at h₃
+    simp at h₁
+    rw [not_or] at h₁
+    by_cases hn : n = 0
+    · rw [hn] at h₂
+      simp at h₂
+    · by_cases hn' : n > 0
+      · simp [hn'] at h₂
+        simp at h₃
+        rw [neg_lt, ← mul_neg, mul_lt_iff_lt_one_right hn', neg_lt] at h₃
+        have : c = 0 := by
+          linarith [h₂, h₃]
+        apply h₁.right this
+      · 
+        sorry
+
+lemma Int.sub_lt {a b n : ℤ} (ha : a < n) (hb : 0 ≤ b) :
+  a - b < n
+  := by
+    apply lt_of_le_of_lt (b := a)
+    · simp [hb]
+    · exact ha
+
 
 /-
  - Parity
@@ -351,6 +381,11 @@ lemma ModEq.cong_zero_iff_dvd {a m : ℕ} :
   := by
     rw [ModEq, zero_mod]
     exact (Nat.dvd_iff_mod_eq_zero _ _).symm
+lemma Int.ModEq.cong_zero_iff_dvd {a m : ℤ} :
+  a ≡ 0 [ZMOD m] ↔ m ∣ a
+  := by
+    rw [ModEq, zero_emod]
+    exact (Int.dvd_iff_emod_eq_zero _ _).symm
 
 /- TODO: Consider removing -/
 lemma ModEq.eq_of_le_of_le {a b m : ℕ} (h : a ≡ b [MOD m]) (ha : 1 ≤ a ∧ a ≤ m) (hb : 1 ≤ b ∧ b ≤ m) :
