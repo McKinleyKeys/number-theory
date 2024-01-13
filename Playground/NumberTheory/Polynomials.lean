@@ -10,110 +10,23 @@ open Nat Finset BigOperators Int.ModEq
  - Definitions
  -/
 
-structure Nat.Poly where
-  data : Array ℕ
-  hd : 0 < data.size
+structure Poly' (α : Type) [CommSemiring α] where
+  degree : ℕ
+  coeff : ℕ → α
 
-def Nat.Poly.degree (p : Nat.Poly) :=
-  p.data.size - 1
-
-def Nat.Poly.coeff (p : Nat.Poly) (k : ℕ) :=
-  p.data.getD k 0
-
-def Nat.Poly.eval (p : Nat.Poly) (x : ℕ) : ℕ :=
-  ∑ k in range p.data.size, (p.coeff k) * x^k
-
-def Nat.Poly.ofFn (n : ℕ) (c : ℕ → ℕ) : Nat.Poly where
-  data := (Array.range (n + 1)).map c
-  hd := by simp
-
-
-structure Int.Poly where
-  data : Array ℤ
-  hd : 0 < data.size
-
-def Int.Poly.degree (p : Int.Poly) :=
-  p.data.size - 1
-
-def Int.Poly.coeff (p : Int.Poly) (k : ℕ) :=
-  p.data.getD k 0
-
-def Int.Poly.eval (p : Int.Poly) (x : ℤ) : ℤ :=
-  ∑ k in Finset.range p.data.size, (p.coeff k) * x^k
-
-def Int.Poly.ofFn (n : ℕ) (c : ℕ → ℤ) : Int.Poly where
-  data := (Array.range (n + 1)).map c
-  hd := by simp
+def Poly'.eval [CommSemiring α] (p : Poly' α) (x : α) : α :=
+  ∑ k in Icc 0 p.degree, (p.coeff k) * x^k
 
 
 /-
  - Lemmas
  -/
 
-lemma Nat.Poly.one_le_size {p : Nat.Poly} :
-  1 ≤ p.data.size
-  :=
-    pos_iff_one_le.mp p.hd
-
-lemma Int.Poly.one_le_size {p : Int.Poly} :
-  1 ≤ p.data.size
-  :=
-    _root_.pos_iff_one_le.mp p.hd
-
-lemma Nat.Poly.size_eq_degree_add_one {p : Nat.Poly} :
-  p.data.size = p.degree + 1
-  := by
-    rw [degree, Nat.sub_add_cancel one_le_size]
-
-lemma Int.Poly.size_eq_degree_add_one {p : Int.Poly} :
-  p.data.size = p.degree + 1
-  := by
-    rw [degree, Nat.sub_add_cancel one_le_size]
-
-lemma Nat.Poly.eval' {p : Nat.Poly} {x : ℕ} :
-  p.eval x = ∑ k in Icc 0 p.degree, (p.coeff k) * x^k
-  := by
-    rw [eval, size_eq_degree_add_one, range_add_one_eq_Icc]
-
-lemma Int.Poly.eval' {p : Int.Poly} {x : ℤ} :
-  p.eval x = ∑ k in Icc 0 p.degree, (p.coeff k) * x^k
-  := by
-    rw [eval, size_eq_degree_add_one, range_add_one_eq_Icc]
-
-lemma Nat.Poly.eval_of_deg_zero {p : Nat.Poly} {x : ℕ} (hp : p.degree = 0) :
+lemma Poly'.eval_of_deg_zero [CommSemiring α] {p : Poly' α} {x : α} (hp : p.degree = 0) :
   p.eval x = p.coeff 0
   := by
-    rw [eval', hp]
+    rw [eval, hp]
     simp
-
-lemma Int.Poly.eval_of_deg_zero {p : Int.Poly} {x : ℤ} (hp : p.degree = 0) :
-  p.eval x = p.coeff 0
-  := by
-    rw [eval', hp]
-    simp
-
-
-lemma Int.Poly.degree_ofFn {c : ℕ → ℤ} {n : ℕ} :
-  (Int.Poly.ofFn n c).degree = n
-  := by
-    rw [ofFn, degree]
-    simp
-
-lemma Int.Poly.coeff_ofFn {c : ℕ → ℤ} {n i : ℕ} (h : i ≤ n) :
-  (Int.Poly.ofFn n c).coeff i = c i
-  := by
-    rw [ofFn, coeff]
-    simp only [Array.getD_eq_get?]
-    have : (Array.map c (Array.range (n + 1))).size = n + 1 := by
-      simp
-    rw [Array.get?, dif_pos]
-    · simp
-      rw [Array.getElem_map]
-      congr
-      rw [Array.range (n+1)]
-      sorry
-    · 
-      sorry
 
 
 lemma Icc_eq_insert_Icc {a b : ℕ} :
@@ -198,7 +111,7 @@ theorem sum_mul_sum_mul {n : ℕ} {a t : ℕ → R} {b : ℕ → ℕ → R} [Com
  - Lagrange's Theorem
  -/
 
-theorem lagrange's_theorem {n p : ℕ} {f : Int.Poly} (hf : f.degree = n) (hp : p.Prime) (h : ↑p ∤ f.coeff n) :
+theorem lagrange's_theorem {n p : ℕ} {f : Poly' ℤ} (hf : f.degree = n) (hp : p.Prime) (h : ↑p ∤ f.coeff n) :
   card (filter (fun (x : ℕ) => f.eval ↑x ≡ 0 [ZMOD ↑p]) (range p)) ≤ n
   := by
     revert f
@@ -221,15 +134,15 @@ theorem lagrange's_theorem {n p : ℕ} {f : Int.Poly} (hf : f.degree = n) (hp : 
       rw [mem_filter] at hx₀
       rcases hx₀ with ⟨hx₀, hx₀'⟩
       let c (i : ℕ) := f.coeff i
-      let f' := Int.Poly.ofFn
+      let f' := Poly'.mk
         m
         (fun i => ∑ j in Icc (i + 1) (m + 1), (c j) * x₀^(j - i - 1))
       have (x : ℤ) : f.eval x - f.eval x₀ = (x - x₀) * (f'.eval x) := calc
         _ = ∑ i in Icc 1 m.succ, (c i) * (x^i - x₀^i)
                 := by
                   rw [
-                    Int.Poly.eval',
-                    Int.Poly.eval',
+                    Poly'.eval,
+                    Poly'.eval,
                     hf,
                     sum_sub_sum,
                     Icc_eq_insert_Icc,
@@ -251,24 +164,18 @@ theorem lagrange's_theorem {n p : ℕ} {f : Int.Poly} (hf : f.degree = n) (hp : 
                   rw [mul_assoc, mul_eq_telescoping_sum]
         _ = (x - x₀) * (f'.eval x)
                 := by
-                  rw [Int.Poly.eval', Int.Poly.degree_ofFn]
+                  unfold_let f'
+                  rw [Poly'.eval]
                   simp (config := {zeta:=false}) only [mul_comm, mul_assoc]
                   rw [← mul_sum]
                   apply congrArg
                   rw [sum_Icc_one, sum_mul_sum_mul, Icc_zero_eq_range_succ, sum_range_zero, mul_zero, sub_zero]
                   apply sum_eq_sum
-                  intro i hi
+                  intro i _
                   congr
-                  unfold_let f'
-                  rw [Int.Poly.coeff_ofFn]
-                  rw [mem_range, lt_succ] at hi
-                  exact hi
-      have hf' : ↑p ∤ f'.coeff m := by
-        rw [Int.Poly.coeff_ofFn]
-        simp
-        apply h
-        rfl
-      specialize hm (f := f') (Int.Poly.degree_ofFn) hf'
+                  funext j
+                  rw [mul_comm]
+      specialize hm (f := f') (by simp) (by simp [h])
       -- X' = roots of f except x₀
       let X' := erase X x₀
       have card_X' : card X' ≥ succ m := by
