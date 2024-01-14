@@ -192,7 +192,69 @@ theorem lagrange's_theorem {n p : ℕ} {f : Poly' ℤ} (hf : f.degree = n) (hp :
       rw [add_one_le_iff, lt_iff_not_ge] at this
       contradiction
 
--- theorem pow_cong_one_solutions {n p : ℕ} (hp : p.Prime) (hn : n ∣ p-1) :
---   card (filter (fun x => x^n ≡ 1 [MOD p]) (range p)) = n
---   := by
---     sorry
+lemma Poly'.int_root_eq_nat_root {cn : ℕ → ℕ} {cz : ℕ → ℤ} {d x : ℕ} (h : ∀ (i : ℕ), ↑(cn i) = cz i) :
+  (Poly'.mk d cz).eval ↑x = ↑((Poly'.mk d cn).eval x)
+  := by
+    rw [eval, eval]
+    dsimp only
+    simp
+    apply sum_congr'
+    intro i _
+    rw [h i]
+
+lemma Int.sub_right_iff {a b c m : ℤ} :
+  a - c ≡ b - c [ZMOD m] ↔ a ≡ b [ZMOD m]
+  := by
+    sorry
+
+theorem pow_cong_one_solutions {n p : ℕ} (hp : p.Prime) (hn : n ∣ p-1) :
+  card (filter (fun x => x^n ≡ 1 [MOD p]) (range p)) = n
+  := by
+    have n_pos : 0 < n := by
+      apply pos_of_dvd_of_pos hn
+      simp
+      apply Prime.one_lt hp
+    -- f(x) = x^n - 1       (in ℤ)
+    let f := Poly'.mk
+      n
+      fun i =>
+        if i = n then
+          1
+        else if i = 0 then
+          -1
+        else
+          0
+    have f_eval {x : ℤ} : f.eval x = x^n - 1 := by
+      rw [Poly'.eval]
+      dsimp only
+      simp only [ite_mul]
+      rw [sum_ite, sum_ite]
+      simp only [zero_mul]
+      rw [sum_const_zero, filter_eq', filter_eq', filter_ne']
+      congr
+      · rw [if_pos (by simp), sum_singleton, one_mul]
+      · rw [
+          if_pos (by simp [n_pos]),
+          sum_singleton,
+          _root_.pow_zero,
+          mul_one,
+          add_zero,
+        ]
+    let roots := filter (fun x => x^n ≡ 1 [MOD p]) (range p)
+    let f_roots := filter (fun (x : ℕ) => f.eval ↑x ≡ 0 [ZMOD ↑p]) (range p)
+    change card roots = n
+    have h_roots : roots = f_roots := by
+      apply filter_congr
+      intro x hx
+      rw [f_eval, ← sub_self 1, Int.sub_right_iff, ← Int.coe_nat_modEq_iff]
+      simp
+    have le : card roots ≤ n := by
+      rw [h_roots]
+      apply lagrange's_theorem (by dsimp) hp
+      dsimp only
+      rw [if_pos rfl]
+      apply Prime.not_dvd_one
+      apply prime_iff_prime_int.mp hp
+    have ge : card roots ≥ n := by
+      sorry
+    apply le_antisymm le ge
