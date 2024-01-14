@@ -53,7 +53,7 @@ def Nat.PerfectSquare (a : ℕ) :=
  - Miscellaneous
  -/
 
-lemma pos_iff_one_le {n : ℕ} :
+lemma Nat.pos_iff_one_le {n : ℕ} :
   0 < n ↔ 1 ≤ n
   := calc
     0 < n ↔ n ≠ 0       := pos_iff_ne_zero
@@ -157,8 +157,8 @@ lemma Finset.range_add_one_eq_Icc {n : ℕ} :
     · intro hx
       apply lt_add_one_iff.mpr hx.right
 
-lemma Finset.insert_Icc_add_one {a b : ℕ} (h : a ≤ b) :
-  insert a (Icc (a + 1) b) = Icc a b
+lemma Finset.insert_Icc_succ_left {a b : ℕ} (h : a ≤ b) :
+  insert a (Icc a.succ b) = Icc a b
   := by
     ext x
     rw [mem_insert, mem_Icc, mem_Icc]
@@ -170,7 +170,7 @@ lemma Finset.insert_Icc_add_one {a b : ℕ} (h : a ≤ b) :
         · rw [left]
           exact h
       · constructor
-        · apply le_trans (by simp) right.left
+        · apply le_trans (le_succ a) right.left
         · exact right.right
     · intro hx
       by_cases hxa : x = a
@@ -182,6 +182,28 @@ lemma Finset.insert_Icc_add_one {a b : ℕ} (h : a ≤ b) :
         · apply add_one_le_iff.mpr
           apply lt_of_le_of_ne hx.left hxa.symm
         · exact hx.right
+
+lemma Finset.Icc_succ_right {a b : ℕ} (h : a ≤ succ b) :
+  Icc a b.succ = insert b.succ (Icc a b)
+  := by
+    ext x
+    rw [mem_Icc, mem_insert, mem_Icc]
+    constructor
+    · intro hx
+      rcases hx with ⟨hax, hxb⟩
+      rw [or_iff_not_imp_left]
+      intro h
+      apply lt_of_le_of_ne hxb at h
+      rw [lt_succ] at h
+      constructor <;> assumption
+    · intro hx
+      rcases hx with left | right
+      · constructor
+        · simp [h, left]
+        · simp [left]
+      · rcases right with ⟨hax, hbx⟩
+        simp [hax]
+        apply le_trans hbx (le_succ b)
 
 lemma Finset.mem_Ico' {a n x : ℕ} (h : x ∈ Ico a (a+n)) :
   ∃ c < n, x = a + c
@@ -755,10 +777,10 @@ lemma mod_pos_of_coprime {a m : ℕ} (hm : m ≠ 1) (ha : Coprime a m) :
  - Big Operators
  -/
 
--- theorem Finset.exists_lt_of_sum_lt_sum {S : Finset α} {f g : α → ℕ} (h : (∑ x in S, f x) < (∑ x in S, g x)) :
---   ∃ x ∈ S, f x < g x
---   := by
---     sorry
+lemma Finset.sum_congr' {S : Finset α} {f g : α → β} [AddCommMonoid β] (h : ∀ i ∈ S, f i = g i) :
+  ∑ i in S, f i = ∑ i in S, g i
+  :=
+    sum_congr rfl h
 
 theorem Finset.sum_le_of_all_le {S : Finset α} [DecidableEq α] {f g : α → ℕ} (h : ∀ x ∈ S, f x ≤ g x) :
   (∑ x in S, f x) ≤ (∑ x in S, g x)
@@ -828,6 +850,69 @@ theorem Finset.sum_card_eq_card_union [DecidableEq α] {I : Finset ℕ} {f : ℕ
             apply h hnI hmI hnm
           · apply hK
       rw [card_disjoint_union h_disjoint, hJ]
+
+lemma Int.sum_sub_sum {S : Finset α} {f g : α → ℤ} :
+  ∑ i in S, f i - ∑ i in S, g i = ∑ i in S, (f i - g i)
+  := by
+    rw [
+      sub_eq_add_neg,
+      ← neg_one_mul,
+      mul_sum,
+      ← sum_add_distrib,
+    ]
+    apply sum_congr'
+    intro i _
+    rw [neg_one_mul, ← sub_eq_add_neg]
+
+theorem Int.mul_eq_telescoping_sum {n : ℕ} {a b : ℤ} :
+  (a - b) * ∑ i in Finset.range n, a^i * b^(n - i - 1) = a^n - b^n
+  := by
+    let f (i : ℕ) := a^i * b^(n - i)
+    calc
+      _ = ∑ i in Finset.range n, (a^(i + 1) * b^(n - i - 1) - a^i * b^(n - i))
+                := by
+                  rw [mul_sum]
+                  apply sum_congr'
+                  intro i hi
+                  rw [
+                    mul_sub_right_distrib,
+                    ← mul_assoc,
+                    ← mul_assoc,
+                    pow_add,
+                    pow_one,
+                    mul_comm (a^i) a,
+                  ]
+                  simp
+                  rw [mul_comm b, mul_assoc]
+                  nth_rw 1 [← pow_one b]
+                  have : 1 ≤ n - i := by
+                    rw [mem_range] at hi
+                    rw [← Nat.pos_iff_one_le]
+                    simp [hi]
+                  rw [
+                    ← pow_add,
+                    ← Nat.add_sub_assoc this,
+                    Nat.add_sub_cancel_left,
+                  ]
+      _ = ∑ i in Finset.range n, (f (i + 1) - f i)   := by congr
+      _ = f n - f 0                                  := by apply sum_range_sub
+      _ = a^n - b^n                                  := by simp
+
+lemma Finset.sum_Icc_succ {a b : ℕ} {f : ℕ → α} [AddCommMonoid α] (h : a ≤ succ b) :
+  ∑ i in Icc a (succ b), f i = (∑ i in Icc a b, f i) + f (succ b)
+  := by
+    rw [Icc_succ_right h, sum_insert, add_comm]
+    simp
+
+lemma Int.sum_Icc_one {n : ℕ} {f : ℕ → ℤ} :
+  ∑ i in Icc 1 n, f i = (∑ i in Finset.range (n + 1), f i) - f 0
+  := by
+    rw [
+      range_eq_insert_zero_Ico_one (by simp),
+      sum_insert (by simp),
+      Ico_succ_right,
+      add_sub_cancel',
+    ]
 
 
 /-

@@ -3,7 +3,7 @@ import Mathlib
 import Playground.SetTheory
 import Playground.NumberTheory.Basic
 
-open Nat Finset BigOperators Int.ModEq
+open Nat Finset BigOperators
 
 
 /-
@@ -19,7 +19,7 @@ def Poly'.eval [CommSemiring α] (p : Poly' α) (x : α) : α :=
 
 
 /-
- - Lemmas
+ - Miscellaneous
  -/
 
 lemma Poly'.eval_of_deg_zero [CommSemiring α] {p : Poly' α} {x : α} (hp : p.degree = 0) :
@@ -28,72 +28,41 @@ lemma Poly'.eval_of_deg_zero [CommSemiring α] {p : Poly' α} {x : α} (hp : p.d
     rw [eval, hp]
     simp
 
-lemma sum_sub_sum {S : Finset α} {f g : α → ℤ} :
-  ∑ i in S, f i - ∑ i in S, g i = ∑ i in S, (f i - g i)
-  := by
-    sorry
-
-lemma sum_eq_sum {S : Finset ℕ} {f g : ℕ → ℤ} (h : ∀ i ∈ S, f i = g i) :
-  ∑ i in S, f i = ∑ i in S, g i
-  := by
-    sorry
-
-theorem mul_eq_telescoping_sum {n : ℕ} {a b : ℤ} :
-  (a - b) * ∑ i in range n, a^i * b^(n - i - 1) = a^n - b^n
-  := by
-    let f (i : ℕ) := a^i * b^(n - i)
-    calc
-      _ = ∑ i in range n, (a^(i + 1) * b^(n - i - 1) - a^i * b^(n - i))
-                := by
-                  rw [mul_sum]
-                  apply sum_eq_sum
-                  intro i hi
-                  rw [
-                    mul_sub_right_distrib,
-                    ← mul_assoc,
-                    ← mul_assoc,
-                    pow_add,
-                    pow_one,
-                    mul_comm (a^i) a,
-                  ]
-                  simp
-                  rw [mul_comm b, mul_assoc]
-                  nth_rw 1 [← pow_one b]
-                  have : 1 ≤ n - i := by
-                    rw [mem_range] at hi
-                    rw [← pos_iff_one_le]
-                    simp [hi]
-                  rw [
-                    ← pow_add,
-                    ← Nat.add_sub_assoc this,
-                    Nat.add_sub_cancel_left,
-                  ]
-      _ = ∑ i in range n, (f (i + 1) - f i)   := by congr
-      _ = f n - f 0                           := by apply Finset.sum_range_sub
-      _ = a^n - b^n                           := by simp
-
-lemma sum_Icc_succ {a b : ℕ} {f : ℕ → α} [AddCommMonoid α] :
-  ∑ i in Icc a (succ b), f i = (∑ i in Icc a b, f i) + f (succ b)
-  := by
-    sorry
-
-lemma sum_Icc_one {n : ℕ} {f : ℕ → α} [AddCommMonoid α] [HSub α α α] :
-  ∑ i in Icc 1 n, f i = (∑ i in range (n + 1), f i) - f 0
-  := by
-    sorry
-
-theorem sum_mul_sum_mul {n : ℕ} {a t : ℕ → R} {b : ℕ → ℕ → R} [CommSemiring R] :
+theorem Finset.sum_mul_sum_mul {n : ℕ} {a t : ℕ → R} {b : ℕ → ℕ → R} [CommSemiring R] :
   ∑ i in range (n+1), (a i) * ∑ j in range i, (t j) * (b i j) = ∑ j in range n, (t j) * ∑ i in Icc (j+1) n, (a i) * (b i j)
   := by
     induction' n with m hm
     · simp
-    · rw [succ_add, sum_range_succ, hm]
-      simp only [sum_Icc_succ, mul_add, sum_add_distrib]
-      rw [sum_range_succ, sum_range_succ, add_assoc]
-      congr
+    · conv =>
+        rhs
+        rw [sum_congr']
+        · skip
+        · tactic =>
+            intro j hj
+            have : j + 1 ≤ succ m := by
+              simp [mem_range.mp hj, succ_le_iff]
+            rw [
+              sum_Icc_succ this,
+              mul_add,
+            ]
+      rw [
+        succ_add,
+        sum_range_succ,
+        hm,
+        sum_range_succ,
+        sum_range_succ,
+      ]
       simp
-      rw [mul_add, sum_range_succ, mul_sum, mul_left_comm]
-      simp [mul_left_comm]
+      rw [
+        mul_add,
+        sum_add_distrib,
+        mul_sum,
+        ← add_assoc,
+        mul_left_comm,
+      ]
+      congr
+      funext i
+      ring
 
 
 /-
@@ -133,8 +102,8 @@ theorem lagrange's_theorem {n p : ℕ} {f : Poly' ℤ} (hf : f.degree = n) (hp :
                     Poly'.eval,
                     Poly'.eval,
                     hf,
-                    sum_sub_sum,
-                    ← insert_Icc_add_one (by simp),
+                    Int.sum_sub_sum,
+                    ← insert_Icc_succ_left (by simp),
                     sum_insert (by simp),
                     _root_.pow_zero,
                     mul_one,
@@ -143,14 +112,14 @@ theorem lagrange's_theorem {n p : ℕ} {f : Poly' ℤ} (hf : f.degree = n) (hp :
                     sub_self,
                     zero_add,
                   ]
-                  apply sum_eq_sum
+                  apply sum_congr'
                   intro i _
                   rw [mul_sub_left_distrib]
         _ = ∑ j in Icc 1 m.succ, (c j) * (x - x₀) * ∑ i in range j, x^i * x₀^(j - i - 1)
                 := by
-                  apply sum_eq_sum
+                  apply sum_congr'
                   intro i _
-                  rw [mul_assoc, mul_eq_telescoping_sum]
+                  rw [mul_assoc, Int.mul_eq_telescoping_sum]
         _ = (x - x₀) * (f'.eval x)
                 := by
                   unfold_let f'
@@ -158,8 +127,15 @@ theorem lagrange's_theorem {n p : ℕ} {f : Poly' ℤ} (hf : f.degree = n) (hp :
                   simp (config := {zeta:=false}) only [mul_comm, mul_assoc]
                   rw [← mul_sum]
                   apply congrArg
-                  rw [sum_Icc_one, sum_mul_sum_mul, ← Finset.range_add_one_eq_Icc, sum_range_zero, mul_zero, sub_zero]
-                  apply sum_eq_sum
+                  rw [
+                    Int.sum_Icc_one,
+                    sum_mul_sum_mul,
+                    ← Finset.range_add_one_eq_Icc,
+                    sum_range_zero,
+                    mul_zero,
+                    sub_zero,
+                  ]
+                  apply sum_congr'
                   intro i _
                   congr
                   funext j
