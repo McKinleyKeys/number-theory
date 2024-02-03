@@ -237,7 +237,7 @@ lemma Nat.sq_lt_sq_of_lt {a b : ℕ} (h : a < b) :
       apply (not_lt_zero a) h
     · apply pos_iff_ne_zero.mpr at hb
       rw [sq, sq]
-      apply Nat.mul_lt_mul' (le_of_lt h) h hb
+      apply Nat.mul_lt_mul_of_le_of_lt (le_of_lt h) h hb
 
 lemma Int.neg_of_ne_zero_of_not_pos {n : ℤ} (h₁ : n ≠ 0) (h₂ : ¬n > 0) :
   n < 0
@@ -525,11 +525,6 @@ lemma incong_set_of_subset_Ico {a m : ℕ} {S : Finset ℕ} (hS : S ⊆ Ico a (a
 /-
  - Primes
  -/
-
-lemma Nat.Prime.one_le {p : ℕ} (hp : p.Prime) :
-  1 ≤ p
-  :=
-    le_of_lt (Prime.one_lt hp)
 
 lemma Nat.Prime.two_dvd {p : ℕ} (hp : p.Prime) (hp' : p > 2) :
   2 ∣ p-1

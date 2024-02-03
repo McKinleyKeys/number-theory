@@ -85,7 +85,7 @@ lemma neg_one_pow_odd {n m : ℕ} (hn : Odd n) :
   (m-1)^n ≡ m-1 [MOD m]
   := by
     by_cases hm : m = 0
-    · rw [hm, Nat.zero_sub, zero_pow (pos_of_odd hn)]
+    · rw [hm, Nat.zero_sub, zero_pow (ne_zero_of_odd hn)]
     · apply zero_lt_of_ne_zero at hm
       rcases odd_iff_eq_even_add_one.mp hn with ⟨k, ⟨hk₁, hk₂⟩⟩
       rw [hk₂, pow_add, pow_one]
@@ -154,7 +154,7 @@ lemma qr_of_cong_zero {a m : ℕ} (ha : a ≡ 0 [MOD m]) :
   QuadraticResidue a m
   := by
     use 0
-    rw [zero_pow two_pos]
+    rw [zero_pow two_ne_zero]
     symm
     exact ha
 lemma qr_of_not_coprime {a p : ℕ} (hp : p.Prime) (ha : ¬Coprime a p) :
@@ -222,7 +222,7 @@ theorem legendre_cong {a p : ℕ} (hp : p.Prime) (hp' : p > 2) :
       · rw [legendre, if_false' ha']
         apply (not_coprime_iff_cong_zero hp).mp at ha'
         apply ModEq.pow ((p-1)/2) at ha'
-        rw [zero_pow p_sub_one_div_two_pos] at ha'
+        rw [zero_pow (pos_iff_ne_zero.mp p_sub_one_div_two_pos)] at ha'
         symm
         exact ha'
     · rw [legendre, if_false' ha]
