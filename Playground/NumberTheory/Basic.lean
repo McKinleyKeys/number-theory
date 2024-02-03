@@ -526,6 +526,11 @@ lemma incong_set_of_subset_Ico {a m : ℕ} {S : Finset ℕ} (hS : S ⊆ Ico a (a
  - Primes
  -/
 
+lemma Nat.Prime.sub_one_pos {p : ℕ} (hp : p.Prime) :
+  p - 1 > 0
+  :=
+    Nat.sub_pos_iff_lt.mpr (Prime.one_lt hp)
+
 lemma Nat.Prime.two_dvd {p : ℕ} (hp : p.Prime) (hp' : p > 2) :
   2 ∣ p-1
   := by
