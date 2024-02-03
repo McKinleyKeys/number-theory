@@ -58,8 +58,8 @@ theorem mckinley's (a p : ℕ) (hp : p.Prime) (h : ∃ k, p = 2^k + 1) :
     -- r < k case. Use contradiction.
     · exfalso
       have : p - 1 ≡ 1 [MOD p] := calc
-        p - 1 = legendre a p              := by rw [← legendre_qnr_eq_p_sub_one a_qnr]
-        _     ≡ a^((p-1)/2) [MOD p]       := legendre_cong hp
+        p - 1 = legendre a p              := by rw [← legendre_eq_neg_one_of_qnr hp a_qnr]
+        _     ≡ a^((p-1)/2) [MOD p]       := legendre_cong hp ge_two
         _     = (a^2^r)^2^(k-r-1)         := by
                                             rw [h]
                                             ring_nf
