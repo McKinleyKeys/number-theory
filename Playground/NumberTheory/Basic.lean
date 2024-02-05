@@ -74,6 +74,12 @@ lemma sub_sub' {a b c : ℕ} (h : c ≤ b) :
         apply hd at hc
         rw [hc]
 
+lemma sub_self_sub {a b : ℕ} (h : b ≤ a) :
+  a - (a - b) = b
+  := by
+    rw [sub_sub' h]
+    apply add_sub_self_left
+
 lemma sub_one_sq {n : ℕ} (h : n > 0) :
   (n-1)^2 = n^2 + 1 - 2*n
   := by
@@ -475,6 +481,12 @@ lemma ModEq.eq_of_le_of_le {a b m : ℕ} (h : a ≡ b [MOD m]) (ha : 1 ≤ a ∧
     dsimp [Set.InjOn] at inj
     apply inj a_mem b_mem h
 
+lemma Int.dvd_iff_cong_zero {a m : ℤ} :
+  m ∣ a ↔ a ≡ 0 [ZMOD m]
+  := by
+    rw [Int.ModEq, Int.zero_emod]
+    apply Int.dvd_iff_emod_eq_zero
+
 
 /-
  - Incongruent Sets
@@ -559,6 +571,18 @@ lemma cong_zero_of_mul_cong_zero {a b p : ℕ} (hp : p.Prime) (h : a * b ≡ 0 [
       ← Nat.dvd_iff_mod_eq_zero,
     ] at *
     exact (Nat.Prime.dvd_mul hp).mp h
+
+lemma Int.Prime.dvd_mul_iff {a b : ℤ} {p : ℕ} (hp : p.Prime) :
+  ↑p ∣ a * b ↔ (↑p ∣ a) ∨ (↑p ∣ b)
+  := by
+    constructor
+    · apply Prime.dvd_mul' hp
+    · intro h
+      rcases h with ha | hb
+      · apply dvd_trans ha
+        apply dvd_mul_right
+      · apply dvd_trans hb
+        apply dvd_mul_left
 
 
 /-

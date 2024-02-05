@@ -286,6 +286,7 @@ theorem pow_cong_one_solutions {n p : ℕ} (hp : p.Prime) (hn : n ∣ p-1) :
       apply pos_of_dvd_of_pos hn
       simp
       apply Prime.one_lt hp
+    have n_le : n ≤ p - 1 := le_of_dvd (Prime.sub_one_pos hp) hn
     -- f(x) = x^n - 1       (in ℤ)
     let f := Poly'.mk
       n
@@ -317,7 +318,7 @@ theorem pow_cong_one_solutions {n p : ℕ} (hp : p.Prime) (hn : n ∣ p-1) :
     change card roots = n
     have h_roots : roots = f_roots := by
       apply filter_congr
-      intro x hx
+      intro x _
       rw [f_eval, ← sub_self 1, Int.sub_right_iff, ← Int.coe_nat_modEq_iff]
       simp
     have le : card roots ≤ n := by
@@ -329,6 +330,7 @@ theorem pow_cong_one_solutions {n p : ℕ} (hp : p.Prime) (hn : n ∣ p-1) :
       apply prime_iff_prime_int.mp hp
     have ge : card roots ≥ n := by
       let k := (p - 1) / n
+      -- g(x) = x^(n(k-1)) + x^(n(k-2)) + ... + x^n + 1
       let g : Poly' ℤ := Poly'.mk
         (n * (k - 1))
         fun i =>
@@ -341,13 +343,14 @@ theorem pow_cong_one_solutions {n p : ℕ} (hp : p.Prime) (hn : n ∣ p-1) :
         dsimp only
         simp [ite_mul]
         rw [sum_ite, sum_const_zero, add_zero]
-        have : (p - 1) / n > 0 := by
-          apply Nat.div_pos _ n_pos
-          apply le_of_dvd (Prime.sub_one_pos hp) hn
+        have : (p - 1) / n > 0 := Nat.div_pos n_le n_pos
         conv =>
           lhs
           arg 1
-          rw [filter_dvd_Icc_eq_filter_dvd_range n_pos this, filter_dvd_eq_image n_pos]
+          rw [
+            filter_dvd_Icc_eq_filter_dvd_range n_pos this,
+            filter_dvd_eq_image n_pos,
+          ]
         conv =>
           rhs
           arg 2
@@ -357,10 +360,7 @@ theorem pow_cong_one_solutions {n p : ℕ} (hp : p.Prime) (hn : n ∣ p-1) :
         intro a ha b hb habn
         apply (Nat.mul_right_inj (pos_iff_ne_zero.mp n_pos)).mp habn
       have hfg {x : ℤ} : (f.eval x) * (g.eval x) = x^(p-1) - 1 := by
-        rw [
-          f_eval,
-          g_eval,
-        ]
+        rw [f_eval, g_eval]
         conv =>
           lhs
           arg 2
@@ -370,6 +370,60 @@ theorem pow_cong_one_solutions {n p : ℕ} (hp : p.Prime) (hn : n ∣ p-1) :
         rw [Int.mul_eq_telescoping_sum, one_pow, ← pow_mul]
         unfold_let k
         rw [Nat.mul_div_cancel' hn]
-      
-      sorry
+      rw [h_roots]
+      have fg_roots : card (filter (fun (x : ℕ) => x^(p-1) - 1 ≡ 0 [ZMOD p]) (range p)) = p - 1 := by
+        rw [
+          range_eq_insert_zero_Ico_one (Prime.pos hp),
+          filter_insert,
+          if_neg (by
+            rw [
+              (Int.coe_nat_eq_zero (n := 0)).mpr (by rfl),
+              zero_pow (pos_iff_ne_zero.mp (Prime.sub_one_pos hp)),
+              zero_sub,
+              Int.ModEq,
+              Int.zero_emod,
+              ← Int.dvd_iff_emod_eq_zero,
+              Int.dvd_neg,
+            ]
+            apply Prime.not_dvd_one (prime_iff_prime_int.mp hp)
+          ),
+          filter_eq_self.mpr (by
+            intro x hx
+            rw [← sub_self 1]
+            apply Int.ModEq.sub_right
+            nth_rw 2 [← cast_one]
+            rw [← Int.coe_nat_pow]
+            rw [Int.coe_nat_modEq_iff]
+            apply fermat's_little_theorem hp (coprime_of_mem_Ico hp hx)
+          ),
+          card_Ico,
+        ]
+      have : ∀ x ∈ range p, x^(p-1) - 1 ≡ 0 [ZMOD p] ↔ f.eval x ≡ 0 [ZMOD p] ∨ g.eval x ≡ 0 [ZMOD p] := by
+        intro h _
+        rw [
+          ← Int.dvd_iff_cong_zero,
+          ← Int.dvd_iff_cong_zero,
+          ← Int.dvd_iff_cong_zero,
+          ← hfg,
+        ]
+        apply Int.Prime.dvd_mul_iff hp
+      let g_roots := filter (fun (x : ℕ) => g.eval x ≡ 0 [ZMOD p]) (range p)
+      have card_g_roots : card g_roots ≤ p - 1 - n := by
+        apply lagrange's_theorem _ hp _
+        · dsimp only
+          rw [Nat.mul_sub_left_distrib, mul_one, Nat.mul_div_cancel' hn]
+        · dsimp only
+          rw [if_pos _]
+          · apply Prime.not_dvd_one (prime_iff_prime_int.mp hp)
+          · apply Nat.dvd_sub n_le hn dvd_rfl
+      rw [filter_congr this, filter_or] at fg_roots
+      change card (f_roots ∪ g_roots) = p - 1 at fg_roots
+      have : card f_roots + card g_roots ≥ p - 1 := calc
+        _ ≥ card (f_roots ∪ g_roots)    := card_union_le _ _
+        _ = p - 1                       := fg_roots
+      apply sub_le_of_le_add at this
+      calc
+        _ ≥ p - 1 - g_roots.card    := this
+        _ ≥ p - 1 - (p - 1 - n)     := Nat.sub_le_sub_left card_g_roots _
+        _ = n                       := sub_self_sub n_le
     apply le_antisymm le ge
