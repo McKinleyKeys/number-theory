@@ -277,7 +277,15 @@ lemma Finset.filter_dvd_Icc_eq_filter_dvd_range {n k : ℕ} (hn : n > 0) (hk : k
 lemma Int.sub_right_iff {a b c m : ℤ} :
   a - c ≡ b - c [ZMOD m] ↔ a ≡ b [ZMOD m]
   := by
-    sorry
+    constructor
+    · intro h
+      apply ModEq.add_right c at h
+      rw [sub_add_cancel, sub_add_cancel] at h
+      exact h
+    · intro h
+      apply ModEq.add_right (-c) at h
+      rw [← sub_eq_add_neg, ← sub_eq_add_neg] at h
+      exact h
 
 theorem pow_cong_one_solutions {n p : ℕ} (hp : p.Prime) (hn : n ∣ p-1) :
   card (filter (fun x => x^n ≡ 1 [MOD p]) (range p)) = n
@@ -357,7 +365,7 @@ theorem pow_cong_one_solutions {n p : ℕ} (hp : p.Prime) (hn : n ∣ p-1) :
           intro i
           rw [← pow_mul]
         rw [sum_image]
-        intro a ha b hb habn
+        intro a _ b _ habn
         apply (Nat.mul_right_inj (pos_iff_ne_zero.mp n_pos)).mp habn
       have hfg {x : ℤ} : (f.eval x) * (g.eval x) = x^(p-1) - 1 := by
         rw [f_eval, g_eval]
