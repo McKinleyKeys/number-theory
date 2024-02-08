@@ -223,6 +223,26 @@ lemma Finset.mem_Ico' {a n x : ℕ} (h : x ∈ Ico a (a+n)) :
       exact h₂
     · simp [h₁]
 
+lemma Finset.Icc_union_Ioo_eq_Ico {a b c : ℕ} (h₁ : a ≤ b) (h₂ : b < c) :
+  Icc a b ∪ Ioo b c = Ico a c
+  := by
+    ext x
+    rw [mem_union, mem_Icc, mem_Ioo, mem_Ico]
+    constructor
+    · intro h
+      rcases h with left | right
+      · rcases left with ⟨left₁, left₂⟩
+        apply And.intro left₁ (lt_of_le_of_lt left₂ h₂)
+      · rcases right with ⟨right₁, right₂⟩
+        apply And.intro (le_of_lt (lt_of_le_of_lt h₁ right₁)) right₂
+    · intro h
+      by_cases hx : x ≤ b
+      · left
+        apply And.intro h.1 hx
+      · right
+        rw [not_le] at hx
+        apply And.intro hx h.2
+
 lemma Nat.sq_le_sq_iff {a b : ℕ} :
   a^2 ≤ b^2 ↔ a ≤ b
   := by
@@ -458,6 +478,19 @@ lemma Int.ModEq.cong_zero_iff_dvd {a m : ℤ} :
   := by
     rw [ModEq, zero_emod]
     exact (Int.dvd_iff_emod_eq_zero _ _).symm
+
+lemma Int.sub_right_iff {a b c m : ℤ} :
+  a - c ≡ b - c [ZMOD m] ↔ a ≡ b [ZMOD m]
+  := by
+    constructor
+    · intro h
+      apply ModEq.add_right c at h
+      rw [sub_add_cancel, sub_add_cancel] at h
+      exact h
+    · intro h
+      apply ModEq.add_right (-c) at h
+      rw [← sub_eq_add_neg, ← sub_eq_add_neg] at h
+      exact h
 
 /- TODO: Consider removing -/
 lemma ModEq.eq_of_le_of_le {a b m : ℕ} (h : a ≡ b [MOD m]) (ha : 1 ≤ a ∧ a ≤ m) (hb : 1 ≤ b ∧ b ≤ m) :

@@ -28,6 +28,16 @@ lemma Poly'.eval_of_deg_zero [CommSemiring α] {p : Poly' α} {x : α} (hp : p.d
     rw [eval, hp]
     simp
 
+lemma Poly'.int_root_eq_nat_root {cn : ℕ → ℕ} {cz : ℕ → ℤ} {d x : ℕ} (h : ∀ (i : ℕ), ↑(cn i) = cz i) :
+  (Poly'.mk d cz).eval ↑x = ↑((Poly'.mk d cn).eval x)
+  := by
+    rw [eval, eval]
+    dsimp only
+    simp
+    apply sum_congr'
+    intro i _
+    rw [h i]
+
 theorem Finset.sum_mul_sum_mul {n : ℕ} {a t : ℕ → R} {b : ℕ → ℕ → R} [CommSemiring R] :
   ∑ i in range (n+1), (a i) * ∑ j in range i, (t j) * (b i j) = ∑ j in range n, (t j) * ∑ i in Icc (j+1) n, (a i) * (b i j)
   := by
@@ -63,6 +73,58 @@ theorem Finset.sum_mul_sum_mul {n : ℕ} {a t : ℕ → R} {b : ℕ → ℕ → 
       congr
       funext i
       ring
+
+lemma Finset.filter_dvd_eq_image {n k : ℕ} (hn : n > 0) :
+  filter (fun x => n ∣ x) (range (n * k)) = image (fun x => n * x) (range k)
+  := by
+    ext x
+    constructor
+    · intro h
+      rw [mem_filter] at h
+      rcases h with ⟨h₁, h₂⟩
+      rw [dvd_iff_exists_eq_mul_right] at h₂
+      rcases h₂ with ⟨c, hc⟩
+      rw [mem_image]
+      use c
+      constructor
+      · rw [mem_range]
+        rw [mem_range, hc] at h₁
+        apply lt_of_mul_lt_mul_left' h₁
+      · exact hc.symm
+    · intro h
+      rw [mem_image] at h
+      rcases h with ⟨a, ⟨ha, h⟩⟩
+      rw [mem_range] at ha
+      rw [mem_filter]
+      constructor
+      · rw [mem_range, ← h]
+        exact Nat.mul_lt_mul_of_pos_left ha hn
+      · exact Dvd.intro a h
+
+lemma Finset.filter_dvd_Icc_eq_filter_dvd_range {n k : ℕ} (hn : n > 0) (hk : k > 0) :
+  filter (fun x => n ∣ x) (Icc 0 (n * (k - 1))) = filter (fun x => n ∣ x) (range (n * k))
+  := by
+    let f (S : Finset ℕ) := filter (fun x => n ∣ x) S
+    change f (Icc 0 (n * (k - 1))) = f (range (n * k))
+    have : f (Ioo (n * (k - 1)) (n * k)) = ∅ := by
+      apply filter_eq_empty_iff.mpr
+      intro x hx
+      rw [mem_Ioo] at hx
+      rcases hx with ⟨h₁, h₂⟩
+      apply not_dvd_of_between_consec_multiples h₁
+      rw [Nat.sub_add_cancel (pos_iff_one_le.mp hk)]
+      exact h₂
+    rw [
+      ← union_empty (f (Icc 0 (n * (k - 1)))),
+      ← this,
+      ← filter_union,
+    ]
+    rw [Icc_union_Ioo_eq_Ico (Nat.zero_le _), Ico_zero_eq_range]
+    rw [Nat.mul_sub_left_distrib]
+    apply Nat.sub_lt_self
+    · rw [mul_one]
+      exact hn
+    · apply Nat.mul_le_mul_left _ (pos_iff_one_le.mp hk)
 
 
 /-
@@ -191,101 +253,6 @@ theorem lagrange's_theorem {n p : ℕ} {f : Poly' ℤ} (hf : f.degree = n) (hp :
                     · apply hX' xₖ hxₖ
       rw [add_one_le_iff, lt_iff_not_ge] at this
       contradiction
-
-lemma Poly'.int_root_eq_nat_root {cn : ℕ → ℕ} {cz : ℕ → ℤ} {d x : ℕ} (h : ∀ (i : ℕ), ↑(cn i) = cz i) :
-  (Poly'.mk d cz).eval ↑x = ↑((Poly'.mk d cn).eval x)
-  := by
-    rw [eval, eval]
-    dsimp only
-    simp
-    apply sum_congr'
-    intro i _
-    rw [h i]
-
-lemma Finset.filter_dvd_eq_image {n k : ℕ} (hn : n > 0) :
-  filter (fun x => n ∣ x) (range (n * k)) = image (fun x => n * x) (range k)
-  := by
-    ext x
-    constructor
-    · intro h
-      rw [mem_filter] at h
-      rcases h with ⟨h₁, h₂⟩
-      rw [dvd_iff_exists_eq_mul_right] at h₂
-      rcases h₂ with ⟨c, hc⟩
-      rw [mem_image]
-      use c
-      constructor
-      · rw [mem_range]
-        rw [mem_range, hc] at h₁
-        apply lt_of_mul_lt_mul_left' h₁
-      · exact hc.symm
-    · intro h
-      rw [mem_image] at h
-      rcases h with ⟨a, ⟨ha, h⟩⟩
-      rw [mem_range] at ha
-      rw [mem_filter]
-      constructor
-      · rw [mem_range, ← h]
-        exact Nat.mul_lt_mul_of_pos_left ha hn
-      · exact Dvd.intro a h
-
-lemma Finset.Icc_union_Ioo_eq_Ico {a b c : ℕ} (h₁ : a ≤ b) (h₂ : b < c) :
-  Icc a b ∪ Ioo b c = Ico a c
-  := by
-    ext x
-    rw [mem_union, mem_Icc, mem_Ioo, mem_Ico]
-    constructor
-    · intro h
-      rcases h with left | right
-      · rcases left with ⟨left₁, left₂⟩
-        apply And.intro left₁ (lt_of_le_of_lt left₂ h₂)
-      · rcases right with ⟨right₁, right₂⟩
-        apply And.intro (le_of_lt (lt_of_le_of_lt h₁ right₁)) right₂
-    · intro h
-      by_cases hx : x ≤ b
-      · left
-        apply And.intro h.1 hx
-      · right
-        rw [not_le] at hx
-        apply And.intro hx h.2
-
-lemma Finset.filter_dvd_Icc_eq_filter_dvd_range {n k : ℕ} (hn : n > 0) (hk : k > 0) :
-  filter (fun x => n ∣ x) (Icc 0 (n * (k - 1))) = filter (fun x => n ∣ x) (range (n * k))
-  := by
-    let f (S : Finset ℕ) := filter (fun x => n ∣ x) S
-    change f (Icc 0 (n * (k - 1))) = f (range (n * k))
-    have : f (Ioo (n * (k - 1)) (n * k)) = ∅ := by
-      apply filter_eq_empty_iff.mpr
-      intro x hx
-      rw [mem_Ioo] at hx
-      rcases hx with ⟨h₁, h₂⟩
-      apply not_dvd_of_between_consec_multiples h₁
-      rw [Nat.sub_add_cancel (pos_iff_one_le.mp hk)]
-      exact h₂
-    rw [
-      ← union_empty (f (Icc 0 (n * (k - 1)))),
-      ← this,
-      ← filter_union,
-    ]
-    rw [Icc_union_Ioo_eq_Ico (Nat.zero_le _), Ico_zero_eq_range]
-    rw [Nat.mul_sub_left_distrib]
-    apply Nat.sub_lt_self
-    · rw [mul_one]
-      exact hn
-    · apply Nat.mul_le_mul_left _ (pos_iff_one_le.mp hk)
-
-lemma Int.sub_right_iff {a b c m : ℤ} :
-  a - c ≡ b - c [ZMOD m] ↔ a ≡ b [ZMOD m]
-  := by
-    constructor
-    · intro h
-      apply ModEq.add_right c at h
-      rw [sub_add_cancel, sub_add_cancel] at h
-      exact h
-    · intro h
-      apply ModEq.add_right (-c) at h
-      rw [← sub_eq_add_neg, ← sub_eq_add_neg] at h
-      exact h
 
 theorem pow_cong_one_solutions {n p : ℕ} (hp : p.Prime) (hn : n ∣ p-1) :
   card (filter (fun x => x^n ≡ 1 [MOD p]) (range p)) = n
