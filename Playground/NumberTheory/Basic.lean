@@ -6,6 +6,15 @@ open Nat Finset BigOperators
 
 
 /-
+ - Count
+ -/
+
+@[simp]
+def Finset.count (p : α → Prop) [DecidablePred p] (s : Finset α) :=
+  card (filter p s)
+
+
+/-
  - NotModEq
  -/
 
@@ -140,6 +149,37 @@ lemma Nat.exists_pos_eq_add_of_lt {a b : ℕ} (h : a < b) :
     · simp
     · rw [hk]
       ring
+
+lemma Nat.sub_mul_sub {a b c d : ℕ} (h : b ≤ a) :
+  (a - b) * (c - d) = a*c - b*c + b*d - a*d
+  := by
+    rw [
+      Nat.mul_sub_left_distrib,
+      Nat.mul_sub_right_distrib,
+      Nat.mul_sub_right_distrib,
+      sub_sub' (mul_le_mul_right d h),
+    ]
+
+lemma Nat.sub_one_div_two_eq_div_two {n : ℕ} (h : Odd n) :
+  (n - 1) / 2 = n / 2
+  := by
+    rw [Odd] at h
+    rcases h with ⟨k, hk⟩
+    rw [
+      hk,
+      Nat.add_one_sub_one,
+      mul_div_right k zero_lt_two,
+      Nat.add_div_of_dvd_right (dvd_mul_right 2 k),
+      Nat.mul_div_cancel_left k zero_lt_two,
+      (Nat.div_eq_zero_iff zero_lt_two).mpr one_lt_two,
+      add_zero,
+    ]
+
+lemma sub_one_div_two_pos {n : ℕ} (hn : n > 2) :
+  0 < (n - 1) / 2
+  := by
+      have : 2 ≤ n - 1 := le_sub_one_of_lt hn
+      apply Nat.div_pos this zero_lt_two
 
 lemma Finset.range_eq_insert_zero_Ico_one {n : ℕ} (h : n > 0) :
   range n = insert 0 (Ico 1 n)
@@ -492,6 +532,31 @@ lemma Int.sub_right_iff {a b c m : ℤ} :
       rw [← sub_eq_add_neg, ← sub_eq_add_neg] at h
       exact h
 
+lemma ModEq.neg_one_mul {a m : ℕ} (ha : a ≤ m) :
+  (m - 1) * a ≡ m - a [MOD m]
+  := by
+    by_cases ha' : a = 0
+    · rw [ha', mul_zero, Nat.sub_zero]
+      apply ModEq.card.symm
+    · apply pos_iff_ne_zero.mpr at ha'
+      rw [Nat.mul_sub_right_distrib, one_mul]
+      nth_rw 1 [← Nat.one_add_sub_one a]
+      rw [
+        Nat.add_sub_assoc ha',
+        mul_add,
+        mul_one,
+        add_comm,
+        Nat.add_sub_assoc ha,
+        mul_comm,
+        add_left_mul_erase,
+      ]
+
+lemma ModEq.neg_one_mul_neg {a m : ℕ} (ha : a ≤ m) :
+  (m - 1) * (m - a) ≡ a [MOD m]
+  := calc
+    _ ≡ m - (m - a) [MOD m]     := neg_one_mul (sub_le _ _)
+    _ = a                       := Nat.sub_sub_self ha
+
 /- TODO: Consider removing -/
 lemma ModEq.eq_of_le_of_le {a b m : ℕ} (h : a ≡ b [MOD m]) (ha : 1 ≤ a ∧ a ≤ m) (hb : 1 ≤ b ∧ b ≤ m) :
   a = b
@@ -585,6 +650,10 @@ lemma Nat.Prime.two_dvd {p : ℕ} (hp : p.Prime) (hp' : p > 2) :
     apply even_sub_one_of_odd at hp'
     apply even_iff_two_dvd.mp hp'
 
+lemma Nat.Prime.odd_of_two_lt {p : ℕ} (hp : p.Prime) (hp' : p > 2) :
+  Odd p
+  := odd_of_ne_two hp (ne_of_gt hp')
+
 lemma Nat.Prime.dvd_iff_dvd_pow {a b p : ℕ} (hp : p.Prime) (hb : b > 0) :
   p ∣ a ↔ p ∣ a^b
   := by
@@ -621,6 +690,13 @@ lemma Int.Prime.dvd_mul_iff {a b : ℤ} {p : ℕ} (hp : p.Prime) :
 /-
  - Coprimes
  -/
+
+lemma not_coprime_zero_left {n : ℕ} (h : n ≠ 1) :
+  ¬Coprime 0 n
+  := (coprime_zero_left n).not.mpr h
+lemma not_coprime_zero_right {n : ℕ} (h : n ≠ 1) :
+  ¬Coprime n 0
+  := (coprime_zero_right n).not.mpr h
 
 lemma exists_dvd_of_not_coprime {a b : ℕ} (h : ¬Coprime a b) :
   ∃ d > 1, d ∣ a ∧ d ∣ b
@@ -791,6 +867,19 @@ lemma coprimes_subset_range {n : ℕ} :
     intro a ha
     rw [mem_range]
     apply mem_coprimes₂ ha
+
+lemma coprimes_eq_Ico_one_of_prime {p : ℕ} (hp : p.Prime) :
+  p.coprimes = Ico 1 p
+  := by
+    rw [
+      coprimes,
+      range_eq_insert_zero_Ico_one hp.pos,
+      filter_insert,
+      if_neg (not_coprime_zero_left hp.ne_one),
+      filter_eq_self,
+    ]
+    intro a ha
+    apply coprime_of_mem_Ico hp ha
 
 lemma coprimes_incong_set {n : ℕ} :
   IncongruentSet n.coprimes n
@@ -976,20 +1065,50 @@ lemma Int.sum_Icc_one {n : ℕ} {f : ℕ → ℤ} :
  - Euler's Totient Theorem
  -/
 
+theorem mul_mod_injOn_coprimes {a m : ℕ} (ha : Coprime a m) :
+  Set.InjOn (fun x => a*x % m) m.coprimes
+  := by
+    intro x hx y hy h
+    change (a*x ≡ a*y [MOD m]) at h
+    apply ModEq.cancel_left_of_coprime at h
+    · let hx' := mem_coprimes₂ hx
+      let hy' := mem_coprimes₂ hy
+      apply ModEq.eq_of_lt_of_lt h hx' hy'
+    · rw [Coprime, Nat.gcd_comm] at ha
+      exact ha
+
+theorem mul_mod_injOn_Ico_of_prime {a p : ℕ} (hp : p.Prime) (ha : Coprime a p) :
+  Set.InjOn (fun x => a*x % p) (Ico 1 p)
+  := by
+    rw [← coprimes_eq_Ico_one_of_prime hp]
+    apply mul_mod_injOn_coprimes ha
+theorem mul_mod_injOn_of_prime {a p : ℕ} (hp : p.Prime) (ha : Coprime a p) :
+  Set.InjOn (fun x => a*x % p) (range p)
+  := by
+    rw [range_eq_insert_zero_Ico_one hp.pos]
+    change Set.InjOn (fun x => a * x % p) ↑({0} ∪ (Ico 1 p))
+    rw [coe_union, Set.injOn_union]
+    · constructor
+      · rw [coe_singleton]
+        apply Set.injOn_singleton
+      · constructor
+        · apply mul_mod_injOn_Ico_of_prime hp ha
+        · intro x hx y hy
+          rw [coe_singleton, Set.mem_singleton_iff] at hx
+          rw [hx, mul_zero, zero_mod, ne_comm, Ne, ← dvd_iff_mod_eq_zero]
+          apply hp.not_dvd_mul
+          · apply not_dvd_of_coprime hp.ne_one ha
+          · rw [coe_Ico, Set.mem_Ico] at hy
+            apply not_dvd_of_pos_of_lt (pos_iff_one_le.mp hy.1) hy.2
+    · simp only [coe_singleton, coe_Ico, Set.disjoint_singleton_left, Set.mem_Ico,
+      nonpos_iff_eq_zero, one_ne_zero, false_and, not_false_eq_true]
+
 theorem euler's_totient_theorem {a m : ℕ} (hm : m > 0) (ha : Coprime a m) :
   a^(φ m) ≡ 1 [MOD m]
   := by
     let f (x : ℕ) := a*x % m
     let S := image f m.coprimes
-    have inj : Set.InjOn f m.coprimes := by
-      intro x hx y hy h
-      change (a*x ≡ a*y [MOD m]) at h
-      apply ModEq.cancel_left_of_coprime at h
-      · let hx' := mem_coprimes₂ hx
-        let hy' := mem_coprimes₂ hy
-        apply ModEq.eq_of_lt_of_lt h hx' hy'
-      · rw [Coprime, Nat.gcd_comm] at ha
-        exact ha
+    have inj : Set.InjOn f m.coprimes := mul_mod_injOn_coprimes ha
     have subset : S ⊆ m.coprimes := by
       intro c hc
       apply mem_image.mp at hc
@@ -1007,7 +1126,7 @@ theorem euler's_totient_theorem {a m : ℕ} (hm : m > 0) (ha : Coprime a m) :
       constructor
       · exact this
       · exact hc
-    have : S = m.coprimes := eq_image_of_inj inj subset
+    have : S = m.coprimes := eq_image_of_inj_of_subset inj subset
     have : (a^(φ m) * ∏ c in m.coprimes, c) ≡ (∏ c in m.coprimes, c) [MOD m] := calc
       a^(φ m) * ∏ c in m.coprimes, c
       _ ≡ ∏ c in m.coprimes, a * c [MOD m]      := by
