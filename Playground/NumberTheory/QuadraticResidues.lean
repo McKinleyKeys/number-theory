@@ -5,7 +5,7 @@ import Playground.NumberTheory.Basic
 import Playground.NumberTheory.Order
 import Playground.NumberTheory.PrimitiveRoots
 
-open Nat
+open Nat Finset BigOperators
 
 
 lemma two_sqrts {a p : ℕ} (hp : p.Prime) :
@@ -199,12 +199,9 @@ lemma legendre_eq_neg_one_of_qnr {a p : ℕ} (hp : p.Prime) (ha : QuadraticNonre
     have : Coprime a p := coprime_of_qnr hp ha
     rw [legendre, if_true' this, if_false' ha]
 
-theorem legendre_cong {a p : ℕ} (hp : p.Prime) (hp' : p > 2) :
+theorem euler's_criterion {a p : ℕ} (hp : p.Prime) (hp' : p > 2) :
   legendre a p ≡ a^((p-1)/2) [MOD p]
   := by
-    have p_sub_one_div_two_pos : 0 < ((p-1)/2) := by
-      have : 2 ≤ p - 1 := le_sub_one_of_lt hp'
-      apply Nat.div_pos this zero_lt_two
     by_cases ha : QuadraticResidue a p
     · by_cases ha' : Coprime a p
       · rw [legendre, if_true' ha', if_true' ha]
@@ -222,7 +219,7 @@ theorem legendre_cong {a p : ℕ} (hp : p.Prime) (hp' : p > 2) :
       · rw [legendre, if_false' ha']
         apply (not_coprime_iff_cong_zero hp).mp at ha'
         apply ModEq.pow ((p-1)/2) at ha'
-        rw [zero_pow (pos_iff_ne_zero.mp p_sub_one_div_two_pos)] at ha'
+        rw [zero_pow (pos_iff_ne_zero.mp (sub_one_div_two_pos hp'))] at ha'
         symm
         exact ha'
     · rw [legendre, if_false' ha]
@@ -258,7 +255,7 @@ theorem legendre_cong {a p : ℕ} (hp : p.Prime) (hp' : p > 2) :
           · exfalso
             have ne_one : r^((p-1)/2) ≢ 1 [MOD p] := by
               apply primitive_root_min hr
-              · linarith
+              · apply sub_one_div_two_pos hp'
               · apply Nat.div_lt_self _ one_lt_two
                 simp
                 linarith [hp']
@@ -270,6 +267,125 @@ theorem legendre_cong {a p : ℕ} (hp : p.Prime) (hp' : p > 2) :
           _ = (r^((p-1)/2))^k             := by ring
           _ ≡ (p - 1)^k [MOD p]           := ModEq.pow _ r_pow
           _ ≡ p - 1 [MOD p]               := neg_one_pow_odd hk'
+
+-- Proof taken from Wikipedia: https://en.wikipedia.org/wiki/Gauss%27s_lemma_(number_theory)#Proof
+theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p) :
+  let g := count (fun x => (a * x) % p > p/2) (Icc 1 ((p-1)/2))
+  legendre a p = (p-1)^g
+  := by
+    intro g
+    -- The lower half of the range [1, p]. That is, {1, 2, ..., (p-1)/2}
+    let H := Icc 1 ((p-1)/2)
+    -- {1a, 2a, ..., (p-1)/2 * a}
+    let X := image (fun x => (a * x) % p) H
+    let z := ∏ x in X, x
+    have h_card_H : card H = (p-1)/2 := by
+      sorry
+    have h_card_X : card X = (p-1)/2 := by
+      sorry
+    have hz₁ : z ≡ a^((p-1)/2) * ∏ x in H, x [MOD p] := by
+      rw [
+        ← h_card_H,
+        ← prod_const (s := H) a,
+        ← prod_mul_distrib,
+      ]
+      unfold_let z
+      unfold_let X
+      sorry
+    let abs' (x : ℕ) :=
+      if x ≤ (p-1)/2 then
+        x
+      else
+        p - x
+    have {x : ℕ} (h : x ≤ p) :
+      x ≡ if x ≤ (p-1)/2 then x else (p-1) * (abs' x) [MOD p]
+      := by
+        by_cases hx : x ≤ (p-1)/2
+        · rw [if_pos hx]
+        · unfold_let abs'
+          dsimp only
+          rw [if_neg hx, if_neg hx]
+          symm
+          apply ModEq.neg_one_mul_neg h
+    -- have : z = ∏ x in X, if x ≤ (p-1)/2
+    have : z ≡ (p-1)^g * ∏ x in X, abs' x [MOD p] := by
+      symm
+      calc
+        _ = (∏ x in X, if x ≤ (p-1)/2 then 1 else p-1) * ∏ x in X, abs' x
+                  := by
+                    nth_rw 2 [prod_ite]
+                    rw [
+                      prod_const_one,
+                      one_mul,
+                      prod_const,
+                    ]
+                    congr
+                    unfold_let g
+                    simp
+                    rw [filter_image, card_image_iff.mpr]
+                    · congr
+                      funext x
+                      rw [sub_one_div_two_eq_div_two (Prime.odd_of_two_lt hp hp')]
+                    · apply Set.InjOn.mono _ (mul_mod_injOn_Ico_of_prime hp ha)
+                      rw [coe_subset]
+                      apply subset_trans (b := Icc 1 ((p-1)/2))
+                      · apply filter_subset
+                      · rw [Icc_subset_Ico_iff]
+                        · constructor
+                          · rfl
+                          · rw [Nat.div_lt_iff_lt_mul two_pos]
+                            apply lt_trans (b := p)
+                            · apply sub_one_lt_of_le hp.pos le_rfl
+                            · apply lt_mul_right hp.pos one_lt_two
+                        · rw [← pos_iff_one_le]
+                          apply sub_one_div_two_pos hp'
+        _ = ∏ x in X, if x ≤ (p-1)/2 then x else (p-1)*(p-x)
+                  := by
+                    rw [← prod_mul_distrib]
+                    congr
+                    funext x
+                    dsimp only
+                    rw [apply_ite₂ HMul.hMul, one_mul]
+        _ ≡ ∏ x in X, x [MOD p]
+                  := by
+                    rw [ModEq, prod_nat_mod]
+                    apply congrArg₂ _ _ rfl
+                    apply prod_congr rfl
+                    intro x hx
+                    rw [mem_image] at hx
+                    rcases hx with ⟨k, ⟨hk, hkx⟩⟩
+                    rw [
+                      apply_ite (fun x => x % p),
+                      ModEq.neg_one_mul_neg (by
+                        rw [← hkx]
+                        apply le_of_lt
+                        apply mod_lt _ hp.pos
+                      ),
+                      ite_id,
+                      ← hkx,
+                      mod_mod,
+                    ]
+        _ = z     := rfl
+    have h_subset : image abs' X ⊆ H := by
+      sorry
+    have h_inj : Set.InjOn abs' X := by
+      
+      sorry
+    have h_abs' : image abs' X = H := by
+      apply eq_image_of_inj_of_subset_of_card_eq h_inj h_subset
+      rw [h_card_X, h_card_H]
+    have hz₂ : z ≡ (p-1)^g * ∏ x in X, x [MOD p] := by
+      
+      sorry
+    
+    
+    
+    -- The elements of A greater than p/2
+    -- let G := filter (fun x => x > p/2) A
+    -- -- The elements of A less than p/2
+    -- let L := filter (fun x => x < p/2) A
+    
+    sorry
 
 
 lemma two_has_only_qrs (a : ℕ) :
