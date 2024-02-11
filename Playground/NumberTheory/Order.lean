@@ -435,7 +435,7 @@ theorem ord_count {p t : ℕ} (hp : p.Prime) (ht : t ∣ p-1) :
         rcases hc with ⟨a, ha⟩
         rw [mem_filter] at ha
         rcases ha with ⟨ha, ha'⟩
-        apply coprime_of_mem_Ico hp at ha
+        apply hp.coprime_of_mem_Ico at ha
         have d_pos : d > 0 := by
           rw [← ha']
           apply ord_pos ha

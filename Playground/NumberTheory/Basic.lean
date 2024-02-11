@@ -194,6 +194,10 @@ lemma Finset.card_Ico_one (n : ℕ) :
   card (Ico 1 n) = n - 1
   := by
     simp
+lemma Finset.card_Icc_one (n : ℕ) :
+  card (Icc 1 n) = n
+  := by
+    simp
 
 lemma Finset.range_add_one_eq_Icc {n : ℕ} :
   range (n + 1) = Icc 0 n
@@ -646,15 +650,6 @@ lemma Nat.Prime.sub_one_pos {p : ℕ} (hp : p.Prime) :
   :=
     Nat.sub_pos_iff_lt.mpr (Prime.one_lt hp)
 
-lemma Nat.Prime.coprime_sub_one_left {p : ℕ} (hp : p.Prime) :
-  Coprime (p - 1) p
-  := by
-    sorry
-lemma Nat.Prime.coprime_sub_one_right {p : ℕ} (hp : p.Prime) :
-  Coprime p (p - 1)
-  := by
-    sorry
-
 lemma Nat.Prime.two_dvd {p : ℕ} (hp : p.Prime) (hp' : p > 2) :
   2 ∣ p-1
   := by
@@ -843,12 +838,30 @@ lemma coprime_of_cong_one {a m : ℕ} (ha : a ≡ 1 [MOD m]) :
     · rw [ModEq, one_mod_of_ne_one hm] at ha
       apply coprime_of_mod_eq_one hm ha
 
-lemma coprime_of_mem_Ico {a p : ℕ} (hp : p.Prime) (ha : a ∈ Ico 1 p) :
+lemma coprime_sub_one_left {n : ℕ} (h : 0 < n) :
+  Coprime (n - 1) n
+  := by
+    rw [coprime_comm]
+    apply coprime_of_cong_one
+    nth_rw 2 [← Nat.sub_add_cancel (pos_iff_one_le.mp h)]
+    apply ModEq.add_left_erase.mpr rfl
+lemma coprime_sub_one_right {n : ℕ} (h : 0 < n) :
+  Coprime n (n - 1)
+  := coprime_comm.mp (coprime_sub_one_left h)
+
+lemma Nat.Prime.coprime_of_mem_Ico {a p : ℕ} (hp : p.Prime) (ha : a ∈ Ico 1 p) :
   Coprime a p
   := by
     rw [mem_Ico] at ha
     apply Coprime.symm
     apply coprime_of_lt_prime (pos_iff_one_le.mpr ha.left) ha.right hp
+
+lemma Nat.Prime.coprime_sub_one_left {p : ℕ} (hp : p.Prime) :
+  Coprime (p - 1) p
+  := _root_.coprime_sub_one_left hp.pos
+lemma Nat.Prime.coprime_sub_one_right {p : ℕ} (hp : p.Prime) :
+  Coprime p (p - 1)
+  := _root_.coprime_sub_one_right hp.pos
 
 def Nat.coprimes (n : ℕ) : Finset ℕ
   := filter (fun x => Coprime x n) (range n)
@@ -893,7 +906,7 @@ lemma coprimes_eq_Ico_one_of_prime {p : ℕ} (hp : p.Prime) :
       filter_eq_self,
     ]
     intro a ha
-    apply coprime_of_mem_Ico hp ha
+    apply hp.coprime_of_mem_Ico ha
 
 lemma coprimes_incong_set {n : ℕ} :
   IncongruentSet n.coprimes n

@@ -279,8 +279,7 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
     -- {1a, 2a, ..., (p-1)/2 * a}
     let X := image (fun x => (a * x) % p) H
     let z := ∏ x in X, x
-    have h_card_H : card H = (p-1)/2 := by
-      sorry
+    have h_card_H : card H = (p-1)/2 := card_Icc_one _
     have h_card_X : card X = (p-1)/2 := by
       sorry
     have coprime_of_mem_H {x : ℕ} (h : x ∈ H) : Coprime x p := by
@@ -500,7 +499,6 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
       apply coprime_prod_left_iff.mpr
       intro i
       exact coprime_of_mem_H
-
 
 lemma two_has_only_qrs (a : ℕ) :
   QuadraticResidue a 2

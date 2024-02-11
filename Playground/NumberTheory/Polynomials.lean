@@ -369,7 +369,7 @@ theorem pow_cong_one_solutions {n p : ℕ} (hp : p.Prime) (hn : n ∣ p-1) :
             nth_rw 2 [← cast_one]
             rw [← Int.coe_nat_pow]
             rw [Int.coe_nat_modEq_iff]
-            apply fermat's_little_theorem hp (coprime_of_mem_Ico hp hx)
+            apply fermat's_little_theorem hp (hp.coprime_of_mem_Ico hx)
           ),
           card_Ico,
         ]
