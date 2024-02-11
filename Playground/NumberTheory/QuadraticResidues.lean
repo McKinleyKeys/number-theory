@@ -291,10 +291,7 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
         Nat.sub_add_cancel hp.one_le,
       ]
       apply hp.even_sub_one (Nat.ne_of_gt hp')
-    have h_card_H : card H = (p-1)/2 := card_Icc_one _
-    have h_card_X : card X = (p-1)/2 := by
-      rw [← h_card_H]
-      apply card_image_iff.mpr
+    have mul_mod_inj : Set.InjOn (fun x => a*x % p) H := by
       intro x hx y hy hxy
       dsimp only at hxy
       rw [← ModEq] at hxy
@@ -303,6 +300,10 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
       have hx' : x < p := lt_of_le_of_lt hx.2 half_lt
       have hy' : y < p := lt_of_le_of_lt hy.2 half_lt
       apply ModEq.eq_of_lt_of_lt hxy hx' hy'
+    have h_card_H : card H = (p-1)/2 := card_Icc_one _
+    have h_card_X : card X = (p-1)/2 := by
+      rw [← h_card_H]
+      apply card_image_iff.mpr mul_mod_inj
     have coprime_of_mem_H {x : ℕ} (h : x ∈ H) : Coprime x p := by
       rw [mem_Icc] at h
       apply hp.coprime_of_mem_Ico
@@ -321,7 +322,8 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
       ]
       unfold_let z
       unfold_let X
-      sorry
+      rw [prod_image mul_mod_inj, ModEq]
+      nth_rw 2 [prod_nat_mod]
     let abs' (x : ℕ) :=
       if x ≤ (p-1)/2 then
         x
@@ -479,8 +481,7 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
         have hy'p : y' < p := calc
           _ ≤ (p-1)/2     := hy'.2
           _ < p           := half_lt
-        have y'_pos : 0 < y' := by
-          sorry
+        have y'_pos : 0 < y' := pos_iff_one_le.mpr hy'.1
         apply (ModEq.trans · (ModEq.neg_one_mul (le_of_lt hy'p))) at eq_neg
         apply (ModEq.eq_of_lt_of_lt · hx'p (Nat.sub_lt_self y'_pos (le_of_lt hy'p))) at eq_neg
         have : x' < p - y' := by
