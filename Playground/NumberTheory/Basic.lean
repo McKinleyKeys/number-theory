@@ -125,6 +125,11 @@ lemma two_mul_le_sq_add_one {n : ℕ} :
         _ ≤ n^2 + 1   := by
                         simp
 
+lemma sub_one_lt_self {n : ℕ} (h : 0 < n) :
+  n - 1 < n
+  :=
+    Nat.sub_lt_self zero_lt_one (pos_iff_one_le.mp h)
+
 lemma lt_of_dvd_sub {a n : ℕ} (hn : 1 < n) (ha : a ∣ n-1) :
   a < n
   := by
@@ -640,6 +645,15 @@ lemma Nat.Prime.sub_one_pos {p : ℕ} (hp : p.Prime) :
   p - 1 > 0
   :=
     Nat.sub_pos_iff_lt.mpr (Prime.one_lt hp)
+
+lemma Nat.Prime.coprime_sub_one_left {p : ℕ} (hp : p.Prime) :
+  Coprime (p - 1) p
+  := by
+    sorry
+lemma Nat.Prime.coprime_sub_one_right {p : ℕ} (hp : p.Prime) :
+  Coprime p (p - 1)
+  := by
+    sorry
 
 lemma Nat.Prime.two_dvd {p : ℕ} (hp : p.Prime) (hp' : p > 2) :
   2 ∣ p-1
