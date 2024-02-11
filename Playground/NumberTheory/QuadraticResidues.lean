@@ -279,15 +279,9 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
     -- {1a, 2a, ..., (p-1)/2 * a}
     let X := image (fun x => (a * x) % p) H
     let z := ∏ x in X, x
-    have h_card_H : card H = (p-1)/2 := card_Icc_one _
-    have h_card_X : card X = (p-1)/2 := by
-      sorry
-    have coprime_of_mem_H {x : ℕ} (h : x ∈ H) : Coprime x p := by
-      sorry
-    have lt_of_mem_X {x : ℕ} (h : x ∈ X) : x < p := by
-      sorry
-    have half_lt : (p-1)/2 < p := by
-      sorry
+    have half_lt : (p-1)/2 < p := calc
+      _ ≤ p - 1           := Nat.div_le_self _ _
+      _ < p               := sub_one_lt_self hp.pos
     have sub_half : p - (p-1)/2 = (p-1)/2 + 1 := by
       apply Nat.sub_eq_of_eq_add
       rw [
@@ -297,6 +291,28 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
         Nat.sub_add_cancel hp.one_le,
       ]
       apply hp.even_sub_one (Nat.ne_of_gt hp')
+    have h_card_H : card H = (p-1)/2 := card_Icc_one _
+    have h_card_X : card X = (p-1)/2 := by
+      rw [← h_card_H]
+      apply card_image_iff.mpr
+      intro x hx y hy hxy
+      dsimp only at hxy
+      rw [← ModEq] at hxy
+      apply ModEq.cancel_left_of_coprime ha.symm at hxy
+      rw [mem_coe, mem_Icc] at hx hy
+      have hx' : x < p := lt_of_le_of_lt hx.2 half_lt
+      have hy' : y < p := lt_of_le_of_lt hy.2 half_lt
+      apply ModEq.eq_of_lt_of_lt hxy hx' hy'
+    have coprime_of_mem_H {x : ℕ} (h : x ∈ H) : Coprime x p := by
+      rw [mem_Icc] at h
+      apply hp.coprime_of_mem_Ico
+      rw [mem_Ico]
+      apply And.intro h.1 (lt_of_le_of_lt h.2 half_lt)
+    have lt_of_mem_X {x : ℕ} (h : x ∈ X) : x < p := by
+      rw [mem_image] at h
+      rcases h with ⟨k, ⟨hk, hkx⟩⟩
+      rw [← hkx]
+      apply mod_lt _ hp.pos
     have hz₁ : z ≡ a^((p-1)/2) * ∏ x in H, x [MOD p] := by
       rw [
         ← h_card_H,
