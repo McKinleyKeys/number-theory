@@ -276,9 +276,9 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
     intro g
     -- The lower half of the range [1, p]. That is, {1, 2, ..., (p-1)/2}
     let H := Icc 1 ((p-1)/2)
-    -- {1a, 2a, ..., (p-1)/2 * a}
-    let X := image (fun x => (a * x) % p) H
-    let z := ∏ x in X, x
+    -- aH = {1a, 2a, ..., (p-1)/2 * a}
+    let aH := image (fun x => (a * x) % p) H
+    let z := ∏ x in aH, x
     have half_lt : (p-1)/2 < p := calc
       _ ≤ p - 1           := Nat.div_le_self _ _
       _ < p               := sub_one_lt_self hp.pos
@@ -301,7 +301,7 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
       have hy' : y < p := lt_of_le_of_lt hy.2 half_lt
       apply ModEq.eq_of_lt_of_lt hxy hx' hy'
     have h_card_H : card H = (p-1)/2 := card_Icc_one _
-    have h_card_X : card X = (p-1)/2 := by
+    have h_card_aH : card aH = (p-1)/2 := by
       rw [← h_card_H]
       apply card_image_iff.mpr mul_mod_inj
     have coprime_of_mem_H {x : ℕ} (h : x ∈ H) : Coprime x p := by
@@ -309,9 +309,9 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
       apply hp.coprime_of_mem_Ico
       rw [mem_Ico]
       apply And.intro h.1 (lt_of_le_of_lt h.2 half_lt)
-    have lt_of_mem_X {x : ℕ} (h : x ∈ X) : x < p := by
+    have lt_of_mem_aH {x : ℕ} (h : x ∈ aH) : x < p := by
       rw [mem_image] at h
-      rcases h with ⟨k, ⟨hk, hkx⟩⟩
+      rcases h with ⟨k, ⟨_, hkx⟩⟩
       rw [← hkx]
       apply mod_lt _ hp.pos
     have hz₁ : z ≡ a^((p-1)/2) * ∏ x in H, x [MOD p] := by
@@ -321,7 +321,7 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
         ← prod_mul_distrib,
       ]
       unfold_let z
-      unfold_let X
+      unfold_let aH
       rw [prod_image mul_mod_inj, ModEq]
       nth_rw 2 [prod_nat_mod]
     let abs' (x : ℕ) :=
@@ -361,11 +361,10 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
             _ ≡ p - x [MOD p]       := ModEq.neg_one_mul hxp
             _ = p - y               := h
             _ ≡ (p-1) * y [MOD p]   := (ModEq.neg_one_mul hyp).symm
-    -- have : z = ∏ x in X, if x ≤ (p-1)/2
-    have : z ≡ (p-1)^g * ∏ x in X, abs' x [MOD p] := by
+    have : z ≡ (p-1)^g * ∏ x in aH, abs' x [MOD p] := by
       symm
       calc
-        _ = (∏ x in X, if x ≤ (p-1)/2 then 1 else p-1) * ∏ x in X, abs' x
+        _ = (∏ x in aH, if x ≤ (p-1)/2 then 1 else p-1) * ∏ x in aH, abs' x
                   := by
                     nth_rw 2 [prod_ite]
                     rw [
@@ -393,21 +392,21 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
                             · apply lt_mul_right hp.pos one_lt_two
                         · rw [← pos_iff_one_le]
                           apply sub_one_div_two_pos hp'
-        _ = ∏ x in X, if x ≤ (p-1)/2 then x else (p-1)*(p-x)
+        _ = ∏ x in aH, if x ≤ (p-1)/2 then x else (p-1)*(p-x)
                   := by
                     rw [← prod_mul_distrib]
                     congr
                     funext x
                     dsimp only
                     rw [apply_ite₂ HMul.hMul, one_mul]
-        _ ≡ ∏ x in X, x [MOD p]
+        _ ≡ ∏ x in aH, x [MOD p]
                   := by
                     rw [ModEq, prod_nat_mod]
                     apply congrArg₂ _ _ rfl
                     apply prod_congr rfl
                     intro x hx
                     rw [mem_image] at hx
-                    rcases hx with ⟨k, ⟨hk, hkx⟩⟩
+                    rcases hx with ⟨k, ⟨_, hkx⟩⟩
                     rw [
                       apply_ite (fun x => x % p),
                       ModEq.neg_one_mul_neg (by
@@ -420,7 +419,7 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
                       mod_mod,
                     ]
         _ = z     := rfl
-    have h_subset : image abs' X ⊆ H := by
+    have h_subset : image abs' aH ⊆ H := by
       intro x hx
       rw [mem_image] at hx
       rcases hx with ⟨k, ⟨hk, hkx⟩⟩
@@ -450,11 +449,11 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
           calc
             _ < p - (p-1)/2       := Nat.sub_lt_sub_left half_lt hk'
             _ = (p-1)/2 + 1       := sub_half
-    have h_inj : Set.InjOn abs' X := by
+    have h_inj : Set.InjOn abs' aH := by
       intro x hx y hy hxy
       rw [mem_coe] at hx hy
-      have hxp := lt_of_mem_X hx
-      have hyp := lt_of_mem_X hy
+      have hxp := lt_of_mem_aH hx
+      have hyp := lt_of_mem_aH hy
       apply abs'_eq_abs' (le_of_lt hxp) (le_of_lt hyp) at hxy
       rcases hxy with eq | eq_neg
       · apply ModEq.eq_of_lt_of_lt eq hxp hyp
@@ -492,9 +491,9 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
             _ ≤ p - y'            := Nat.sub_le_sub_left hy'.2 _
         apply Nat.ne_of_lt at this
         exact this eq_neg
-    have h_abs' : image abs' X = H := by
+    have h_abs' : image abs' aH = H := by
       apply eq_image_of_inj_of_subset_of_card_eq h_inj h_subset
-      rw [h_card_X, h_card_H]
+      rw [h_card_aH, h_card_H]
     have hz₂ : z ≡ (p-1)^g * ∏ x in H, x [MOD p] := by
       conv at this =>
         rhs
