@@ -8,11 +8,10 @@ import Playground.NumberTheory.Order
 
 open Nat
 
-theorem mckinley's (a p : ℕ) (hp : p.Prime) (h : ∃ k, p = 2^k + 1) :
-  QuadraticNonresidue a p -> PrimitiveRoot a p
+theorem mckinley's {a p : ℕ} (hp : p.Prime) (h : ∃ k, p = 2^k + 1) (ha : QuadraticNonresidue a p) :
+  PrimitiveRoot a p
   := by
-    intro a_qnr
-    have ha : Coprime a p := by
+    have hap : Coprime a p := by
       rcases coprime_or_dvd_of_prime hp a with left | right
       · rw [coprime_comm] at left
         exact left
@@ -32,8 +31,8 @@ theorem mckinley's (a p : ℕ) (hp : p.Prime) (h : ∃ k, p = 2^k + 1) :
     rcases this with eq_two | ne_two
     -- p = 2 case
     · exfalso
-      rw [eq_two] at a_qnr
-      have a_qr : QuadraticResidue a 2 := two_has_only_qrs a
+      rw [eq_two] at ha
+      have ha' : QuadraticResidue a 2 := two_has_only_qrs a
       contradiction
     -- p ≠ 2 case
     have ge_two : 2 < p := by
@@ -48,7 +47,7 @@ theorem mckinley's (a p : ℕ) (hp : p.Prime) (h : ∃ k, p = 2^k + 1) :
       rw [lt_one]
       norm_num
     have : (ord a p) ∣ 2^k := calc
-      (ord a p) ∣ (p - 1)           := by apply ord_dvd_p_sub_one hp ha
+      (ord a p) ∣ (p - 1)           := by apply ord_dvd_p_sub_one hp hap
       _         = 2^k               := by rw [h]; simp
     apply (Nat.dvd_prime_pow prime_two).mp at this
     rcases this with ⟨r, ⟨r_le_k, hr⟩⟩
@@ -58,8 +57,8 @@ theorem mckinley's (a p : ℕ) (hp : p.Prime) (h : ∃ k, p = 2^k + 1) :
     -- r < k case. Use contradiction.
     · exfalso
       have : p - 1 ≡ 1 [MOD p] := calc
-        p - 1 = legendre a p              := by rw [← legendre_eq_neg_one_of_qnr hp a_qnr]
-        _     ≡ a^((p-1)/2) [MOD p]       := legendre_cong hp ge_two
+        p - 1 = legendre a p              := by rw [← legendre_eq_neg_one_of_qnr hp ha]
+        _     ≡ a^((p-1)/2) [MOD p]       := euler's_criterion hp ge_two
         _     = (a^2^r)^2^(k-r-1)         := by
                                             rw [h]
                                             ring_nf
