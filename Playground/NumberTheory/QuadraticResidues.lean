@@ -4,6 +4,7 @@ import Playground.Logic
 import Playground.NumberTheory.Basic
 import Playground.NumberTheory.Order
 import Playground.NumberTheory.PrimitiveRoots
+import Playground.BigOperators
 
 open Nat Finset BigOperators
 
@@ -537,16 +538,6 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
       apply coprime_prod_left_iff.mpr
       intro i
       exact coprime_of_mem_H
-
-namespace BigOperators
-open Std.ExtendedBinder
-
-/-- `∑ S` is notation for `Finset.sum S id`. It is the sum of all elements of `S`. -/
-scoped syntax (name := bigsumset) "∑ " extBinder : term
-scoped macro_rules (kind := bigsumset)
-  | `(∑ $s:ident) => `(Finset.sum $s (fun x => x))
-
-end BigOperators
 
 theorem gauss's_lemma' {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p) (ha' : Odd a) :
   let S := ∑ k in Icc 1 ((p-1)/2), a * k / p
