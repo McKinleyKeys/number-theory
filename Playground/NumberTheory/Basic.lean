@@ -804,7 +804,7 @@ lemma coprime_pow {a b n : ℕ} (ha : Coprime a n) :
     · apply pos_iff_ne_zero.mpr at hb
       apply (coprime_pow_iff hb).mpr ha
 
-lemma not_coprime_iff_cong_zero {a p : ℕ} (hp : p.Prime) :
+lemma Nat.Prime.not_coprime_iff_cong_zero {a p : ℕ} (hp : p.Prime) :
   ¬Coprime a p ↔ a ≡ 0 [MOD p]
   := calc
     ¬Coprime a p
@@ -816,11 +816,19 @@ lemma not_coprime_iff_cong_zero {a p : ℕ} (hp : p.Prime) :
                           dsimp only [ModEq]
                           rw [zero_mod]
                           apply dvd_iff_mod_eq_zero
-lemma coprime_iff_ncong_zero {a p : ℕ} (hp : p.Prime) :
+lemma Nat.Prime.coprime_iff_ncong_zero {a p : ℕ} (hp : p.Prime) :
   Coprime a p ↔ a ≢ 0 [MOD p]
   := by
     apply Iff.not_right
     apply not_coprime_iff_cong_zero hp
+
+lemma Nat.Prime.ne_zero_of_coprime {a p : ℕ} (hp : p.Prime) (ha : Coprime a p) :
+  a ≠ 0
+  := by
+    contrapose ha
+    rw [Classical.not_not] at ha
+    rw [ha, coprime_zero_left]
+    apply hp.ne_one
 
 lemma coprime_of_mod_eq_one {a m : ℕ} (hm : m ≠ 1) (ha : a % m = 1) :
   Coprime a m
@@ -1077,6 +1085,11 @@ lemma Finset.sum_Icc_succ {a b : ℕ} {f : ℕ → α} [AddCommMonoid α] (h : a
     rw [Icc_succ_right h, sum_insert, add_comm]
     simp
 
+lemma Finset.sum_image_id {S : Finset α} {f : α → β} [AddCommMonoid β] [DecidableEq β] (hf : Set.InjOn f S) :
+  ∑ x in image f S, x = ∑ x in S, f x
+  :=
+    sum_image (f := id) (g := f) hf
+
 lemma Int.sum_Icc_one {n : ℕ} {f : ℕ → ℤ} :
   ∑ i in Icc 1 n, f i = (∑ i in Finset.range (n + 1), f i) - f 0
   := by
@@ -1104,12 +1117,12 @@ theorem mul_mod_injOn_coprimes {a m : ℕ} (ha : Coprime a m) :
     · rw [Coprime, Nat.gcd_comm] at ha
       exact ha
 
-theorem mul_mod_injOn_Ico_of_prime {a p : ℕ} (hp : p.Prime) (ha : Coprime a p) :
+theorem Nat.Prime.mul_mod_injOn_Ico {a p : ℕ} (hp : p.Prime) (ha : Coprime a p) :
   Set.InjOn (fun x => a*x % p) (Ico 1 p)
   := by
     rw [← coprimes_eq_Ico_one_of_prime hp]
     apply mul_mod_injOn_coprimes ha
-theorem mul_mod_injOn_of_prime {a p : ℕ} (hp : p.Prime) (ha : Coprime a p) :
+theorem Nat.Prime.mul_mod_injOn {a p : ℕ} (hp : p.Prime) (ha : Coprime a p) :
   Set.InjOn (fun x => a*x % p) (range p)
   := by
     rw [range_eq_insert_zero_Ico_one hp.pos]
@@ -1119,7 +1132,7 @@ theorem mul_mod_injOn_of_prime {a p : ℕ} (hp : p.Prime) (ha : Coprime a p) :
       · rw [coe_singleton]
         apply Set.injOn_singleton
       · constructor
-        · apply mul_mod_injOn_Ico_of_prime hp ha
+        · apply mul_mod_injOn_Ico hp ha
         · intro x hx y hy
           rw [coe_singleton, Set.mem_singleton_iff] at hx
           rw [hx, mul_zero, zero_mod, ne_comm, Ne, ← dvd_iff_mod_eq_zero]
@@ -1130,8 +1143,8 @@ theorem mul_mod_injOn_of_prime {a p : ℕ} (hp : p.Prime) (ha : Coprime a p) :
     · simp only [coe_singleton, coe_Ico, Set.disjoint_singleton_left, Set.mem_Ico,
       nonpos_iff_eq_zero, one_ne_zero, false_and, not_false_eq_true]
 
-theorem euler's_totient_theorem {a m : ℕ} (hm : m > 0) (ha : Coprime a m) :
-  a^(φ m) ≡ 1 [MOD m]
+theorem mul_mod_coprimes_eq_coprimes {a m : ℕ} (hm : m > 0) (ha : Coprime a m) :
+  image (fun x => a*x % m) m.coprimes = m.coprimes
   := by
     let f (x : ℕ) := a*x % m
     let S := image f m.coprimes
@@ -1153,7 +1166,14 @@ theorem euler's_totient_theorem {a m : ℕ} (hm : m > 0) (ha : Coprime a m) :
       constructor
       · exact this
       · exact hc
-    have : S = m.coprimes := eq_image_of_inj_of_subset inj subset
+    exact eq_image_of_inj_of_subset inj subset
+
+theorem euler's_totient_theorem {a m : ℕ} (hm : m > 0) (ha : Coprime a m) :
+  a^(φ m) ≡ 1 [MOD m]
+  := by
+    let f (x : ℕ) := a*x % m
+    let S := image f m.coprimes
+    have : S = m.coprimes := mul_mod_coprimes_eq_coprimes hm ha
     have : (a^(φ m) * ∏ c in m.coprimes, c) ≡ (∏ c in m.coprimes, c) [MOD m] := calc
       a^(φ m) * ∏ c in m.coprimes, c
       _ ≡ ∏ c in m.coprimes, a * c [MOD m]      := by
@@ -1165,13 +1185,13 @@ theorem euler's_totient_theorem {a m : ℕ} (hm : m > 0) (ha : Coprime a m) :
       _ ≡ ∏ c in S, c [MOD m]                   := by
                                                   dsimp [S, ModEq]
                                                   rw [prod_image, prod_nat_mod]
-                                                  congr
+                                                  apply mul_mod_injOn_coprimes ha
       _ ≡ ∏ c in m.coprimes, c [MOD m]          := by rw [this]
-    have h_prod : Coprime (∏ c in coprimes m, c) m := by
+    have h_prod : Coprime (∏ c in m.coprimes, c) m := by
       apply Coprime.prod_left
       rintro c hc
       apply mem_coprimes₁ hc
-    apply ModEq.cancel_right_of_coprime (c := ∏ x in coprimes m, x)
+    apply ModEq.cancel_right_of_coprime (c := ∏ x in m.coprimes, x)
     · rw [← Coprime]
       apply coprime_comm.mpr h_prod
     · rw [one_mul]

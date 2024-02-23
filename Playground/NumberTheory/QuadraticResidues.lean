@@ -160,7 +160,7 @@ lemma qr_of_cong_zero {a m : ℕ} (ha : a ≡ 0 [MOD m]) :
 lemma qr_of_not_coprime {a p : ℕ} (hp : p.Prime) (ha : ¬Coprime a p) :
   QuadraticResidue a p
   := by
-    apply (not_coprime_iff_cong_zero hp).mp at ha
+    apply hp.not_coprime_iff_cong_zero.mp at ha
     apply qr_of_cong_zero ha
 lemma ncong_zero_of_qnr {a m : ℕ} (ha : QuadraticNonresidue a m) :
   a ≢ 0 [MOD m]
@@ -172,7 +172,7 @@ lemma ncong_zero_of_qnr {a m : ℕ} (ha : QuadraticNonresidue a m) :
 lemma coprime_of_qnr {a p : ℕ} (hp : p.Prime) (ha : QuadraticNonresidue a p) :
   Coprime a p
   := by
-    apply (coprime_iff_ncong_zero hp).mpr
+    apply hp.coprime_iff_ncong_zero.mpr
     apply ncong_zero_of_qnr ha
 
 
@@ -217,7 +217,7 @@ theorem euler's_criterion {a p : ℕ} (hp : p.Prime) (hp' : p > 2) :
                                     rw [Nat.div_mul_cancel (Prime.two_dvd hp hp')]
         _ ≡ a^((p-1)/2) [MOD p]   := by rw [ModEq, pow_mod, pow_mod a, h]
       · rw [legendre, if_false' ha']
-        apply (not_coprime_iff_cong_zero hp).mp at ha'
+        apply hp.not_coprime_iff_cong_zero.mp at ha'
         apply ModEq.pow ((p-1)/2) at ha'
         rw [zero_pow (pos_iff_ne_zero.mp (sub_one_div_two_pos hp'))] at ha'
         symm
@@ -268,81 +268,61 @@ theorem euler's_criterion {a p : ℕ} (hp : p.Prime) (hp' : p > 2) :
           _ ≡ (p - 1)^k [MOD p]           := ModEq.pow _ r_pow
           _ ≡ p - 1 [MOD p]               := neg_one_pow_odd hk'
 
--- Proof taken from Wikipedia: https://en.wikipedia.org/wiki/Gauss%27s_lemma_(number_theory)#Proof
-theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p) :
-  let g := count (fun x => (a * x) % p > p/2) (Icc 1 ((p-1)/2))
-  legendre a p ≡ (p-1)^g [MOD p]
+namespace Nat.Prime.Half
+
+def H (p : ℕ) := Icc 1 ((p-1)/2)
+
+def abs' (x p : ℕ) :=
+  if x ≤ (p-1)/2 then
+    x
+  else
+    p - x
+
+lemma half_lt {p : ℕ} (hp : p.Prime) :
+  (p-1)/2 < p
+  := calc
+    _ ≤ p - 1           := Nat.div_le_self _ _
+    _ < p               := sub_one_lt_self hp.pos
+
+lemma one_le_half {p : ℕ} (hp' : p > 2) :
+  1 ≤ (p-1)/2
   := by
-    intro g
-    -- The lower half of the range [1, p]. That is, {1, 2, ..., (p-1)/2}
-    let H := Icc 1 ((p-1)/2)
-    -- aH = {1a, 2a, ..., (p-1)/2 * a}
-    let aH := image (fun x => (a * x) % p) H
-    let z := ∏ x in aH, x
-    have half_lt : (p-1)/2 < p := calc
-      _ ≤ p - 1           := Nat.div_le_self _ _
-      _ < p               := sub_one_lt_self hp.pos
-    have sub_half : p - (p-1)/2 = (p-1)/2 + 1 := by
-      apply Nat.sub_eq_of_eq_add
-      rw [
-        add_right_comm,
-        ← mul_two,
-        div_two_mul_two_of_even,
-        Nat.sub_add_cancel hp.one_le,
-      ]
-      apply hp.even_sub_one (Nat.ne_of_gt hp')
-    have mul_mod_inj : Set.InjOn (fun x => a*x % p) H := by
-      intro x hx y hy hxy
-      dsimp only at hxy
-      rw [← ModEq] at hxy
-      apply ModEq.cancel_left_of_coprime ha.symm at hxy
-      rw [mem_coe, mem_Icc] at hx hy
-      have hx' : x < p := lt_of_le_of_lt hx.2 half_lt
-      have hy' : y < p := lt_of_le_of_lt hy.2 half_lt
-      apply ModEq.eq_of_lt_of_lt hxy hx' hy'
-    have h_card_H : card H = (p-1)/2 := card_Icc_one _
-    have h_card_aH : card aH = (p-1)/2 := by
-      rw [← h_card_H]
-      apply card_image_iff.mpr mul_mod_inj
-    have coprime_of_mem_H {x : ℕ} (h : x ∈ H) : Coprime x p := by
-      rw [mem_Icc] at h
-      apply hp.coprime_of_mem_Ico
-      rw [mem_Ico]
-      apply And.intro h.1 (lt_of_le_of_lt h.2 half_lt)
-    have lt_of_mem_aH {x : ℕ} (h : x ∈ aH) : x < p := by
-      rw [mem_image] at h
-      rcases h with ⟨k, ⟨_, hkx⟩⟩
-      rw [← hkx]
-      apply mod_lt _ hp.pos
-    have hz₁ : z ≡ a^((p-1)/2) * ∏ x in H, x [MOD p] := by
-      rw [
-        ← h_card_H,
-        ← prod_const (s := H) a,
-        ← prod_mul_distrib,
-      ]
-      unfold_let z
-      unfold_let aH
-      rw [prod_image mul_mod_inj, ModEq]
-      nth_rw 2 [prod_nat_mod]
-    let abs' (x : ℕ) :=
-      if x ≤ (p-1)/2 then
-        x
-      else
-        p - x
-    have {x : ℕ} (h : x ≤ p) :
-      x ≡ if x ≤ (p-1)/2 then x else (p-1) * (abs' x) [MOD p]
+    rw [one_le_div_iff zero_lt_two]
+    apply le_sub_one_of_lt hp'
+
+lemma sub_half {p : ℕ} (hp : p.Prime) (hp' : p > 2) :
+  p - (p-1)/2 = (p-1)/2 + 1
+  := by
+    apply Nat.sub_eq_of_eq_add
+    rw [
+      add_right_comm,
+      ← mul_two,
+      div_two_mul_two_of_even,
+      Nat.sub_add_cancel hp.one_le,
+    ]
+    apply hp.even_sub_one (Nat.ne_of_gt hp')
+
+lemma mul_mod_inj {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p) :
+  Set.InjOn (fun x => a*x % p) (H p)
+  := by
+      apply Set.InjOn.mono (s₂ := Ico 1 p) _ (hp.mul_mod_injOn_Ico ha)
+      apply (Icc_subset_Ico_iff (one_le_half hp')).mpr
+      exact And.intro le_rfl (half_lt hp)
+
+lemma cong_ite_self_neg_abs'_self {x p : ℕ} (hx : x ≤ p) :
+      x ≡ if x ≤ (p-1)/2 then x else (p-1) * (abs' x p) [MOD p]
       := by
-        by_cases hx : x ≤ (p-1)/2
-        · rw [if_pos hx]
-        · unfold_let abs'
-          dsimp only
-          rw [if_neg hx, if_neg hx]
+        by_cases h : x ≤ (p-1)/2
+        · rw [if_pos h]
+        · dsimp only
+          rw [if_neg h, abs', if_neg h]
           symm
-          apply ModEq.neg_one_mul_neg h
-    have abs'_eq_abs' {x y : ℕ} (hxp : x ≤ p) (hyp : y ≤ p) (h : abs' x = abs' y) :
+          apply ModEq.neg_one_mul_neg hx
+
+lemma abs'_eq_abs' {x y p : ℕ} (hp : p.Prime) (hxp : x ≤ p) (hyp : y ≤ p) (h : abs' x p = abs' y p) :
       x ≡ y [MOD p] ∨ x ≡ p - y [MOD p]
       := by
-        dsimp only at h
+        rw [abs', abs'] at h
         by_cases hx : x ≤ (p-1)/2
         all_goals by_cases hy : y ≤ (p-1)/2
         · rw [if_pos hx, if_pos hy] at h
@@ -361,13 +341,53 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
             _ ≡ p - x [MOD p]       := ModEq.neg_one_mul hxp
             _ = p - y               := h
             _ ≡ (p-1) * y [MOD p]   := (ModEq.neg_one_mul hyp).symm
-    have : z ≡ (p-1)^g * ∏ x in aH, abs' x [MOD p] := by
+
+end Nat.Prime.Half
+
+open Nat.Prime.Half
+
+-- Proof taken from Wikipedia: https://en.wikipedia.org/wiki/Gauss%27s_lemma_(number_theory)#Proof
+theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p) :
+  let g := count (fun x => (a * x) % p > p/2) (Icc 1 ((p-1)/2))
+  legendre a p ≡ (p-1)^g [MOD p]
+  := by
+    intro g
+    -- aH = {1a, 2a, ..., (p-1)/2 * a}
+    let H := H p
+    let aH := image (fun x => (a * x) % p) H
+    let z := ∏ x in aH, x
+    have h_card_H : card H = (p-1)/2 := card_Icc_one _
+    have h_card_aH : card aH = (p-1)/2 := by
+      rw [← h_card_H]
+      apply card_image_iff.mpr (mul_mod_inj hp hp' ha)
+    have coprime_of_mem_H {x : ℕ} (h : x ∈ H) : Coprime x p := by
+      change x ∈ Icc 1 ((p-1)/2) at h
+      rw [mem_Icc] at h
+      apply hp.coprime_of_mem_Ico
+      rw [mem_Ico]
+      apply And.intro h.1 (lt_of_le_of_lt h.2 (half_lt hp))
+    have lt_of_mem_aH {x : ℕ} (h : x ∈ aH) : x < p := by
+      rw [mem_image] at h
+      rcases h with ⟨k, ⟨_, hkx⟩⟩
+      rw [← hkx]
+      apply mod_lt _ hp.pos
+    have hz₁ : z ≡ a^((p-1)/2) * ∏ x in H, x [MOD p] := by
+      rw [
+        ← h_card_H,
+        ← prod_const (s := H) a,
+        ← prod_mul_distrib,
+      ]
+      unfold_let z
+      unfold_let aH
+      rw [prod_image (mul_mod_inj hp hp' ha), ModEq]
+      nth_rw 2 [prod_nat_mod]
+    have : z ≡ (p-1)^g * ∏ x in aH, abs' x p [MOD p] := by
       symm
       calc
-        _ = (∏ x in aH, if x ≤ (p-1)/2 then 1 else p-1) * ∏ x in aH, abs' x
+        _ = (∏ x in aH, if x ≤ (p-1)/2 then 1 else p-1) * ∏ x in aH, abs' x p
                   := by
-                    nth_rw 2 [prod_ite]
                     rw [
+                      prod_ite,
                       prod_const_one,
                       one_mul,
                       prod_const,
@@ -379,7 +399,7 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
                     · congr
                       funext x
                       rw [sub_one_div_two_eq_div_two (Prime.odd_of_two_lt hp hp')]
-                    · apply Set.InjOn.mono _ (mul_mod_injOn_Ico_of_prime hp ha)
+                    · apply Set.InjOn.mono _ (hp.mul_mod_injOn_Ico ha)
                       rw [coe_subset]
                       apply subset_trans (b := Icc 1 ((p-1)/2))
                       · apply filter_subset
@@ -397,8 +417,7 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
                     rw [← prod_mul_distrib]
                     congr
                     funext x
-                    dsimp only
-                    rw [apply_ite₂ HMul.hMul, one_mul]
+                    rw [abs', apply_ite₂ HMul.hMul, one_mul]
         _ ≡ ∏ x in aH, x [MOD p]
                   := by
                     rw [ModEq, prod_nat_mod]
@@ -419,13 +438,14 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
                       mod_mod,
                     ]
         _ = z     := rfl
-    have h_subset : image abs' aH ⊆ H := by
+    have h_subset : image (abs' · p) aH ⊆ H := by
       intro x hx
       rw [mem_image] at hx
       rcases hx with ⟨k, ⟨hk, hkx⟩⟩
       rw [mem_image] at hk
       rcases hk with ⟨j, ⟨hj, hjk⟩⟩
-      dsimp only at hkx
+      change x ∈ Icc 1 ((p-1)/2)
+      rw [abs'] at hkx
       by_cases hk' : k ≤ (p-1)/2
       · rw [if_pos hk'] at hkx
         rw [← hkx, mem_Icc]
@@ -447,14 +467,14 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
         · rw [not_le] at hk'
           apply Nat.lt_add_one_iff.mp
           calc
-            _ < p - (p-1)/2       := Nat.sub_lt_sub_left half_lt hk'
-            _ = (p-1)/2 + 1       := sub_half
-    have h_inj : Set.InjOn abs' aH := by
+            _ < p - (p-1)/2       := Nat.sub_lt_sub_left (half_lt hp) hk'
+            _ = (p-1)/2 + 1       := sub_half hp hp'
+    have h_inj : Set.InjOn (abs' · p) aH := by
       intro x hx y hy hxy
       rw [mem_coe] at hx hy
       have hxp := lt_of_mem_aH hx
       have hyp := lt_of_mem_aH hy
-      apply abs'_eq_abs' (le_of_lt hxp) (le_of_lt hyp) at hxy
+      apply abs'_eq_abs' hp (le_of_lt hxp) (le_of_lt hyp) at hxy
       rcases hxy with eq | eq_neg
       · apply ModEq.eq_of_lt_of_lt eq hxp hyp
       · exfalso
@@ -462,6 +482,8 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
         rw [mem_image] at hx hy
         rcases hx with ⟨x', ⟨hx', hx'x⟩⟩
         rcases hy with ⟨y', ⟨hy', hy'y⟩⟩
+        change x' ∈ Icc 1 ((p-1)/2) at hx'
+        change y' ∈ Icc 1 ((p-1)/2) at hy'
         rw [mem_Icc] at hx' hy'
         rw [
           ← hx'x,
@@ -476,10 +498,10 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
         apply ModEq.cancel_left_of_coprime ha.symm at eq_neg
         have hx'p : x' < p := calc
           _ ≤ (p-1)/2     := hx'.2
-          _ < p           := half_lt
+          _ < p           := half_lt hp
         have hy'p : y' < p := calc
           _ ≤ (p-1)/2     := hy'.2
-          _ < p           := half_lt
+          _ < p           := half_lt hp
         have y'_pos : 0 < y' := pos_iff_one_le.mpr hy'.1
         apply (ModEq.trans · (ModEq.neg_one_mul (le_of_lt hy'p))) at eq_neg
         apply (ModEq.eq_of_lt_of_lt · hx'p (Nat.sub_lt_self y'_pos (le_of_lt hy'p))) at eq_neg
@@ -487,11 +509,11 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
           apply lt_of_le_of_lt hx'.2
           calc
             _ < (p-1)/2 + 1       := (lt_add_iff_pos_right _).mpr zero_lt_one
-            _ = p - (p-1)/2       := sub_half.symm
+            _ = p - (p-1)/2       := (sub_half hp hp').symm
             _ ≤ p - y'            := Nat.sub_le_sub_left hy'.2 _
         apply Nat.ne_of_lt at this
         exact this eq_neg
-    have h_abs' : image abs' aH = H := by
+    have h_abs' : image (abs' · p) aH = H := by
       apply eq_image_of_inj_of_subset_of_card_eq h_inj h_subset
       rw [h_card_aH, h_card_H]
     have hz₂ : z ≡ (p-1)^g * ∏ x in H, x [MOD p] := by
@@ -500,9 +522,9 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
         arg 2
         arg 2
         intro x
-        change id (abs' x)
+        change id (abs' x p)
       rw [
-        ← prod_image (g := abs') h_inj,
+        ← prod_image (g := (abs' · p)) h_inj,
         h_abs',
       ] at this
       exact this
@@ -515,6 +537,80 @@ theorem gauss's_lemma {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p
       apply coprime_prod_left_iff.mpr
       intro i
       exact coprime_of_mem_H
+
+namespace BigOperators
+open Std.ExtendedBinder
+
+/-- `∑ S` is notation for `Finset.sum S id`. It is the sum of all elements of `S`. -/
+scoped syntax (name := bigsumset) "∑ " extBinder : term
+scoped macro_rules (kind := bigsumset)
+  | `(∑ $s:ident) => `(Finset.sum $s (fun x => x))
+
+end BigOperators
+
+theorem gauss's_lemma' {a p : ℕ} (hp : p.Prime) (hp' : p > 2) (ha : Coprime a p) (ha' : Odd a) :
+  let S := ∑ k in Icc 1 ((p-1)/2), a * k / p
+  legendre a p ≡ (p-1)^S [MOD p]
+  := by
+    intro S
+    -- The lower half of the range [1, p]. That is, {1, 2, ..., (p-1)/2}
+    let H := Icc 1 ((p-1)/2)
+    -- aH = {1a, 2a, ..., (p-1)/2 * a}
+    let aH := image (a * ·) H
+    let aH_div := image (a * · / p) H
+    let aH_mod := image (a * · % p) H
+    let G := filter (· > p/2) aH_mod
+    let g := card G
+    let L := filter (· ≤ p/2) aH_mod
+    let paHp := image (fun x => p * (a*x / p)) H
+    have one_le_half : 1 ≤ (p-1)/2 := by
+      rw [one_le_div_iff zero_lt_two]
+      apply le_sub_one_of_lt hp'
+    have half_lt : (p-1)/2 < p := calc
+      _ ≤ p - 1           := Nat.div_le_self _ _
+      _ < p               := sub_one_lt_self hp.pos
+    have mul_mod_inj : Set.InjOn (fun x => a*x % p) H := by
+      apply Set.InjOn.mono (s₂ := Ico 1 p) _ (hp.mul_mod_injOn_Ico ha)
+      apply (Icc_subset_Ico_iff one_le_half).mpr
+      exact And.intro le_rfl half_lt
+    have hGL : Disjoint G L := by
+      rw [disjoint_filter]
+      intro x hx hx'
+      rw [not_le]
+      exact hx'
+    have hR : aH_mod = Finset.disjUnion G L hGL := by
+      ext x
+      rw [mem_disjUnion]
+      constructor
+      · intro hx
+        rw [mem_filter, mem_filter, ← and_or_left]
+        exact And.intro hx (lt_or_ge _ _)
+      · intro hx
+        rcases hx with hx | hx <;> exact (mem_filter.mp hx).1
+    have a_ne_zero : a ≠ 0 := hp.ne_zero_of_coprime ha
+    have : ∑ aH = ∑ x in H, (p * (a*x / p)) + ∑ G + ∑ L := by
+      rw [sum_image (by
+        intro x _ y _
+        apply (Nat.mul_right_inj a_ne_zero).mp
+      )]
+      conv =>
+        lhs
+        arg 2
+        intro x
+        rw [← div_add_mod (a*x) p]
+      rw [sum_add_distrib, add_assoc]
+      congr
+      rw [← sum_image_id (f := (a * · % p)) mul_mod_inj]
+      change ∑ aH_mod = ∑ G + ∑ L
+      rw [hR, sum_disjUnion]
+    have : ∑ H = ∑ x in G, (p - x) + ∑ L := by
+      
+      sorry
+    -- have : (a - 1) * ∑ H = ∑ paH' - p*g + 2 * ∑ G := by
+    --   sorry
+    have : S ≡ g [MOD 2] := by
+      sorry
+    sorry
 
 lemma two_has_only_qrs (a : ℕ) :
   QuadraticResidue a 2
